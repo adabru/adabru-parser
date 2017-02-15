@@ -1,0 +1,34 @@
+{
+  "name": "adabru-parser",
+  "version": "1.0.0",
+  "description": "PEG parser generator",
+  "scripts": {
+    "prepublish": "lsc -c *.ls"
+  },
+  "bin": {
+    "abp": "./cli.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adabru/adabru-parser.git"
+  },
+  "keywords": [
+    "PEG",
+    "asynchronous",
+    "multipass",
+    "parallel",
+    "incremental",
+    "parser",
+    "generator"
+  ],
+  "author": "adabru",
+  "license": "Unlicense",
+  "bugs": {
+    "url": "https://github.com/adabru/adabru-parser/issues"
+  },
+  "homepage": "https://github.com/adabru/adabru-parser#readme",
+  "devDependencies": {
+    "livescript": "^1.5.0",
+    "minimist": "^1.2.0"
+  }
+}

@@ -16,7 +16,6 @@ colors = let e = ((e1,e2,s) --> "\u001b[#{e1}m#{s}\u001b[#{e2}m")
     f = [] ; for i in [0 to 7] then f[i]=e("3#i","39") ; for i in [90 to 97] then f[i]=e(i,"39")
     {f,b,inv:e('07','27'), pos:e('27','07'), bold:e('01',22), dim:e('02',22), reset:e('00','00')}
 ellipsis = (s,l=10,r=15,e='…') ->
-  {f} = colors
   m = Math.round l/2
   if s.length < r then s else "#{s.substr 0,m}#e#{s.substr -m,m}"
 replace = (s, dic=[]) ->
@@ -304,10 +303,11 @@ inspect = (x, memory, stack, {running=false,stack_trace=null}) ->
     @status.running = false
     if @interval? then clearInterval @interval
   @end = ~>
+    log 'end '+(@istream is process.stdin)
     if @interval? then clearInterval @interval
     @istream.removeListener 'data', @callback
     @istream.pause!
-    if @istream != process.stdin then @istream.end!
+    # if @istream isnt process.stdin then @istream.end!
     if @status.started then write '\u001b[?47l\u001b8'
   @
 
