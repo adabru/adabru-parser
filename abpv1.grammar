@@ -1,0 +1,24 @@
+S ← (:'\n' | Rule | :Comment)*
+Comment ← ' '* '#' [^\n]*
+Rule ← NT :' ' ('←' | '↖') :' ' Big
+
+# precedence is defined as follows (reversed)
+Big ↖ PASS | ALT | SEQ | Medium
+Medium ↖ AND | NOT | VOID | OPT | STAR | PLUS | Small
+Small ↖ T | NT | :'(' :' '* Big :' '* :')'
+PASS ← (ALT | SEQ | Medium) :[ \n]* :'↺' :' '* (ALT | SEQ | Medium)
+ALT ← (SEQ | Medium) (:' '* (:'|' | :'\n' :' '* :'|') :' '* (SEQ | Medium))+
+SEQ ← Medium (:' ' Medium)+
+
+AND ← :'&' Medium
+NOT ← :'!' Medium
+VOID ← :':' Medium
+
+OPT ← Small :'?'
+STAR ← Small :'*'
+PLUS ← Small :'+'
+
+NT ← [A-Z] [A-Za-z0-9_]*
+T ← '\'' ('\\\'' | [^'])* '\''
+  | '[' ('\\]' | [^\]])* ']'
+  | '.'

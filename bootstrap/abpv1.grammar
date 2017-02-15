@@ -1,0 +1,16 @@
+S ← (:'\n' | Rule | :Comment)*
+Comment ← ' '* '#' [^\n]*
+Rule ← NT :' ' ('←' | '↖') :' ' Big
+Big ↖ ALT | SEQ | Medium
+Medium ↖ AND | NOT | VOID | OPT | STAR | PLUS | Small
+Small ↖ T | NT | :'(' Big :')'
+ALT ← (SEQ | Medium) (:' | ' (SEQ | Medium))+
+SEQ ← Medium (:' ' Medium)+
+AND ← :'&' Medium
+NOT ← :'!' Medium
+VOID ← :':' Medium
+OPT ← Small :'?'
+STAR ← Small :'*'
+PLUS ← Small :'+'
+NT ← [A-Z] [A-Za-z]*
+T ← '\'' ('\\\'' | [^'])* '\'' | '[' ('\\]' | [^\]])* ']' | '.'
