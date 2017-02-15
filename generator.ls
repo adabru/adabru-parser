@@ -7,7 +7,7 @@ promiseThenCatch = (p, t, c) -> p.then(t).catch(c)
 module.exports = exports = (grammarText) ->
   abpv1Grammar = require './abpv1.json'
   abpv1 = require './abpv1.ls'
-  inspector = require './inspector.js'
+  inspector = require './inspector.ls'
   memory = {name: 'memory'}
 
   (fulfill,reject) <- new Promise _

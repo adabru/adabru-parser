@@ -2,8 +2,8 @@
 
 # helper functions
 require! [util,tty,fs]
-repl = (context={}) ->
-  Object.assign require('repl').start('node> ').context, context
+# repl = (context={}) ->
+#   Object.assign require('repl').start('node> ').context, context
 util.hash = (s) ->
   hash = 0
   for i from 0 to s.length-1
@@ -29,7 +29,7 @@ todo = (s) ->
   console.log '\u001b[33mTODO: '+s+'\u001b[39m'
 
 
-abpv1 = require './abpv1.js'
+abpv1 = require './abpv1.ls'
 
 memory_screen = ({memory, x, cursor}, repaint) ->
   x_hash = ''+util.hash x
@@ -303,7 +303,6 @@ inspect = (x, memory, stack, {running=false,stack_trace=null}) ->
     @status.running = false
     if @interval? then clearInterval @interval
   @end = ~>
-    log 'end '+(@istream is process.stdin)
     if @interval? then clearInterval @interval
     @istream.removeListener 'data', @callback
     @istream.pause!

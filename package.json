@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "PEG parser generator",
   "scripts": {
-    "prepublish": "lsc -c *.ls"
+    "prepublish": "webpack"
   },
   "bin": {
     "abp": "./cli.js"
@@ -29,6 +29,8 @@
   "homepage": "https://github.com/adabru/adabru-parser#readme",
   "devDependencies": {
     "livescript": "^1.5.0",
-    "minimist": "^1.2.0"
+    "livescript-loader": "^0.1.6",
+    "minimist": "^1.2.0",
+    "webpack": "^2.2.1"
   }
 }
