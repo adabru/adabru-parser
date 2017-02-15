@@ -3,6 +3,8 @@
 util = require 'util'
 print = (o, d=10) ->
   console.log util.inspect o, {colors: true, depth: d}
+stackTrace = (e) ->
+  "\033[31m#{console.log e.stack}\033[39m"
 todo = (s) ->
   console.log '\u001b[33mTODO: '+s+'\u001b[39m'
 util.hash = (s) ->
@@ -11,6 +13,7 @@ util.hash = (s) ->
     hash  = (((hash .<<. 5) - hash) + s.charCodeAt i) .|. 0
   hash
 util.flatten = (arr) -> [].concat.apply [], arr
+promiseThenCatch = (p, t, c) -> p.then(t).catch(c)
 
 export class Ast
   (@name, @start, @end=start, @lookAhead=start, @status, @children=[]) ->
@@ -157,17 +160,17 @@ adabru_v1_parser = new
   @parse = (stack, blocking_rate) ~>
     _call = (func, {x,x_hash}, pos, node) !-> stack.push [func,  {x,x_hash}, pos, node, void]
     _local = (s) -> stack[*-1][4] = s
-    new Promise (fulfill, reject) ->
-      parse_loop = ->
-        while i++ < blocking_rate
-          if stack[0] instanceof Ast then return fulfill stack[0]
-          if stack[*-1] instanceof Ast then ast = stack.pop! else ast = void
-          last = stack[*-1]
-          res = last.0 last.1, last.2, last.3, [_call,ast,_local], last.4
-          if res? then stack[*-1] = res
-        i := 0
-        setTimeout parse_loop
-      parse_loop!
+    (fulfill, reject) <- new Promise _
+    parse_loop = ->
+      while i++ < blocking_rate
+        if stack[0] instanceof Ast then return fulfill stack[0]
+        if stack[*-1] instanceof Ast then ast = stack.pop! else ast = void
+        last = stack[*-1]
+        res = last.0 last.1, last.2, last.3, [_call,ast,_local], last.4
+        if res? then stack[*-1] = res
+      i := 0
+      setTimeout parse_loop
+    parse_loop!
 
 
 bind_grammar = (grammar, impl) ->
@@ -376,7 +379,7 @@ export parse = (x, grammar, options={}) ->
 
   # technical parsing
   options.stack.push [node.func, {x,x_hash:util.hash(x)}, 0, node, []]
-  ast <- parser.parse(options.stack, options.blocking_rate).then _
+  ast <- promiseThenCatch parser.parse(options.stack, options.blocking_rate), _, stackTrace
   if ast.end != x.length then ast.status = 'fail' ; ast.error = 'did not capture whole input'
   if ast.status == 'fail' then return fulfill ast
 

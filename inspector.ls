@@ -24,9 +24,12 @@ replace = (s, dic=[]) ->
 error = (s) ->
   console.log '\u001b[1m\u001b[31m'+s+'\u001b[39m\u001b[0m'
 log = console.log
+stackTrace = (e) ->
+  error e.stack
 write = (s) -> process.stdout.write s
 todo = (s) ->
   console.log '\u001b[33mTODO: '+s+'\u001b[39m'
+promiseThenCatch = (p, t, c) -> p.then(t).catch(c)
 
 
 abpv1 = require './abpv1.ls'
@@ -322,7 +325,7 @@ export debug_parse = (x, grammar, parser_options={}, {print_ast=true,stack_trace
   if small_block then parser_options.blocking_rate ?= 1e4
   inspect_inst = new inspect x, memory, stack, {+running,stack_trace}
   inspect_inst.start!
-  ast <- abpv1.parse(x, grammar, Object.assign parser_options, {memory,stack}).catch(log).then _
+  ast <- promiseThenCatch abpv1.parse(x, grammar, Object.assign parser_options, {memory,stack}), _, stackTrace
   inspect_inst.stopped!
   stack_trace?.push stack[0]
   if ast.status == 'fail'
@@ -352,5 +355,5 @@ printed_pruned_ast = (ast) ->
 # tests
 if process.argv.1.endsWith 'inspector.ls'
   memory = {name:'abcd'}
-  (ast) <- debug_parse('S ← [ab]', require('./abpv1.json'), {memory}).catch(log).then _
+  (ast) <- promiseThenCatch debug_parse('S ← [ab]', require('./abpv1.json'), {memory}), _, stackTrace
   log ast

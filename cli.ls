@@ -89,7 +89,7 @@ do ->
       case void then
       case '-' then log JSON.stringify grammar, null, '  '
       default
-        fs.writeFileSync o, JSON.stringify grammar, null, '  '
+        fs.writeFileSync o, JSON.stringify grammar
         log "written file \033[1m#{o}\033[22m"
     fulfill grammar
   g_compiled <- promiseThenCatch p, _, stackTrace
