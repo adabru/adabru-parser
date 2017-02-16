@@ -309,7 +309,7 @@ inspect = (x, memory, stack, {running=false,stack_trace=null}) ->
     if @interval? then clearInterval @interval
     @istream.removeListener 'data', @callback
     @istream.pause!
-    # if @istream isnt process.stdin then @istream.end!
+    if @istream isnt process.stdin then @istream.end!
     if @status.started then write '\u001b[?47l\u001b8'
   @
 

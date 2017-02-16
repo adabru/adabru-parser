@@ -160,17 +160,24 @@ adabru_v1_parser = new
   @parse = (stack, blocking_rate) ~>
     _call = (func, {x,x_hash}, pos, node) !-> stack.push [func,  {x,x_hash}, pos, node, void]
     _local = (s) -> stack[*-1][4] = s
-    (fulfill, reject) <- new Promise _
-    parse_loop = ->
-      while i++ < blocking_rate
-        if stack[0] instanceof Ast then return fulfill stack[0]
-        if stack[*-1] instanceof Ast then ast = stack.pop! else ast = void
-        last = stack[*-1]
-        res = last.0 last.1, last.2, last.3, [_call,ast,_local], last.4
-        if res? then stack[*-1] = res
-      i := 0
-      setTimeout parse_loop
-    parse_loop!
+    step = ->
+      if stack[0] instanceof Ast then return stack[0]
+      if stack[*-1] instanceof Ast then ast = stack.pop! else ast = void
+      last = stack[*-1]
+      res = last.0 last.1, last.2, last.3, [_call,ast,_local], last.4
+      if res? then stack[*-1] = res
+      null
+    if blocking_rate is Infinity
+      while not (ast=step!) then
+      ast
+    else
+      (fulfill, reject) <- new Promise _
+      parse_loop = ->
+        while i++ < blocking_rate
+          if (ast=step!)? then return fulfill ast
+        i := 0
+        setTimeout parse_loop
+      parse_loop!
 
 
 bind_grammar = (grammar, impl) ->
@@ -246,166 +253,180 @@ decorate_parser = (parser, {
     else             return new Ast '_T',pos,pos,x.length,'fail'
   parser
 
+export parseSync = (x, grammar, options) ->
+  parse x, grammar, Object.assign options ? {}, {blocking_rate: Infinity}
 export parse = (x, grammar, options={}) ->
-  (fulfill, reject) <- new Promise _
-  options := {memory:{},startNT:Object.keys(grammar)[0],stack:[],blocking_rate:5e5} <<< options
+  options = {memory:{},startNT:Object.keys(grammar)[0],stack:[],blocking_rate:5e5} <<< options
 
-  # clone grammar for further processing
-  grammar := JSON.parse JSON.stringify grammar
+  prepareParser = (grammar,options) ->
+    # clone grammar for further processing
+    grammar = JSON.parse JSON.stringify grammar
 
-  # optimization: retrieve first letter ranges of NTs
-  min = 0x0000
-  max = 0xffff
-  _ = {}
-  _'¬' = (ccs) -> ccs.reduce(
-    ([a,left],cc) ->
-      if left < cc[0] then [a ++ [[left,cc[0]-1]], cc[1]+1] else [a, cc[1]+1]
-    , [[],min]) |> ([a,left]) -> if left < max then a ++ [[left,max]] else a
-  _'∪' = (...ccs) -> (ccs |> util.flatten).sort( (s,t)->+s.0 - +t.0 ).reduce(
-    ([...as,a],cc) ->
-      switch
-        case not a? then [cc]
-        case a[1] >= cc[0]-1 then [...as,[a[0],a[1]>?cc[1]]]
-        default then [...as,a,cc]
-    , [])
-  _'∩' = (...ccs) -> _'¬' _'∪' ...(ccs.map _'¬')
-  first_letter = ({grammar,avoid_loops=true}:options,node) -->
-    _first_letter = first_letter options
-    {func,params:[p, ...ps]} = node
-    switch func
-      case 'terminal'
-        node.first_letter =
-          x:switch
-            case util.isString p                then [[p.charCodeAt(0), p.charCodeAt(0)]]
-            case util.isArray p and p[0] == '^' then _'¬' _'∪' (p.slice 1).map (cc) -> [cc.charCodeAt(0),cc.charCodeAt(1)]
-            case util.isArray p                 then _'∪' p.map (cc) -> [cc.charCodeAt(0),cc.charCodeAt(1)]
-            case p is null                      then [[min,max]]
-          ε:[]
-      case 'alternative'
-        node.first_letter = p.map(_first_letter).reduce (a,b) ->
-          x: a.x `_'∪'` b.x
-          ε: a.ε `_'∪'` b.ε
-        ,{x:[],ε:[]}
-      case 'sequence'
-        node.first_letter = p.reduce(
-          (a,child) ->
-            if a.stop and avoid_loops then a else
-              b = _first_letter child
-              x: a.x `_'∪'` (a.ε `_'∩'` b.x)
-              ε: a.ε `_'∩'` b.ε
-              stop: b.ε.length == 0
-          ,{x:[],ε:[[min,max]]}
-        ){x,ε}
-      case 'and'
-        a = _first_letter p
-        node.first_letter =
-          x:[]
-          ε: a.x `_'∪'` a.ε
-      case 'not'
-        a = _first_letter p
-        node.first_letter =
-          x:[]
-          ε: _'¬' (a.x `_'∪'` a.ε)
-      case 'optional','star'
-        a = _first_letter p
-        node.first_letter =
-          x:a.x
-          ε:[[min,max]]
-      case 'void','plus'
-        node.first_letter = _first_letter p
-      case 'multipass'
-        _first_letter p[1]
-        node.first_letter = _first_letter p[0]
-      case 'nonterminal'
-        node.first_letter ?= _first_letter grammar[p]
-  for k of grammar
-    grammar[k].first_letter ? first_letter {grammar},grammar[k]
-  for k of grammar
-    first_letter {grammar,-avoid_loops},grammar[k]
-
-  # optimization: regex substitution
-  substitute_with_regex = (parent_precedence, node) -->
-    precedence = ['terminal' 'star' 'plus' 'optional' 'sequence' 'alternative' 'and' 'not']
-    {func,params:[p, ...ps]} = node
-    swr = substitute_with_regex (precedence.indexOf(func) ? 0)
-    child_regex = ((this_func, child) -->
-      _child_func = child.func
-      if swr(child)?
-        r = child.regex
-        if precedence.indexOf(func) < precedence.indexOf(if _child_func is 'terminal' and util.isString child.params.0 and child.params.0.length > 0 then 'sequence' else _child_func)
-          r = "(#r)"
-        r
-    ) func
-    node.precedence = precedence.indexOf func
-    node.regex = switch func
-      case 'nonterminal' then void
-      case 'void' then swr p ; void
-      case 'multipass' then swr p.0 ; swr p.1 ; void
-      case 'terminal'
-        cc_string = (ccs) ->
-          ccs.map((cc) -> "#{cc.0}#{if cc.0 != cc.1 then "-#{cc.1}" else ""}").join('').replace(/]/g, '\\]')
+    # optimization: retrieve first letter ranges of NTs
+    min = 0x0000
+    max = 0xffff
+    _ = {}
+    _'¬' = (ccs) -> ccs.reduce(
+      ([a,left],cc) ->
+        if left < cc[0] then [a ++ [[left,cc[0]-1]], cc[1]+1] else [a, cc[1]+1]
+      , [[],min]) |> ([a,left]) -> if left < max then a ++ [[left,max]] else a
+    _'∪' = (...ccs) -> (ccs |> util.flatten).sort( (s,t)->+s.0 - +t.0 ).reduce(
+      ([...as,a],cc) ->
         switch
-          case util.isString p
-            ['\\\\','\\[','\\|','\\*','\\+','\\?','\\(','\\)','\\.'].reduce ((a,x) -> a.replace new RegExp(x,'g'), x), p
-          case util.isArray p and p[0] == '^' then "[^#{cc_string(p.slice(1))}]"
-          case util.isArray p                 then "[#{cc_string(p)}]"
-          case p is null                      then "[^]"
-      case 'alternative'
-        children = p.map (c) -> child_regex c
-        if children.every((c) -> c?) then children.join('|')
-        else                         then void
-      case 'sequence'
-        children = p.map (c) -> child_regex c
-        if children.every((c) -> c?) then children.join('')
-        else void
-      case 'and' then (if (s=child_regex p)? then "(?=#s)")
-      case 'not' then (if (s=child_regex p)? then "(?!#s)")
-      case 'optional' then (if (s=child_regex p)? then "#s?")
-      case 'star' then (if (s=child_regex p)? then "#s*")
-      case 'plus' then (if (s=child_regex p)? then "#s+")
-    if node.regex? then node.func = 'regex'
-    node.regex
-  for k of grammar
-    substitute_with_regex 0,grammar[k]
+          case not a? then [cc]
+          case a[1] >= cc[0]-1 then [...as,[a[0],a[1]>?cc[1]]]
+          default then [...as,a,cc]
+      , [])
+    _'∩' = (...ccs) -> _'¬' _'∪' ...(ccs.map _'¬')
+    first_letter = ({grammar,avoid_loops=true}:options,node) -->
+      _first_letter = first_letter options
+      {func,params:[p, ...ps]} = node
+      switch func
+        case 'terminal'
+          node.first_letter =
+            x:switch
+              case util.isString p                then [[p.charCodeAt(0), p.charCodeAt(0)]]
+              case util.isArray p and p[0] == '^' then _'¬' _'∪' (p.slice 1).map (cc) -> [cc.charCodeAt(0),cc.charCodeAt(1)]
+              case util.isArray p                 then _'∪' p.map (cc) -> [cc.charCodeAt(0),cc.charCodeAt(1)]
+              case p is null                      then [[min,max]]
+            ε:[]
+        case 'alternative'
+          node.first_letter = p.map(_first_letter).reduce (a,b) ->
+            x: a.x `_'∪'` b.x
+            ε: a.ε `_'∪'` b.ε
+          ,{x:[],ε:[]}
+        case 'sequence'
+          node.first_letter = p.reduce(
+            (a,child) ->
+              if a.stop and avoid_loops then a else
+                b = _first_letter child
+                x: a.x `_'∪'` (a.ε `_'∩'` b.x)
+                ε: a.ε `_'∩'` b.ε
+                stop: b.ε.length == 0
+            ,{x:[],ε:[[min,max]]}
+          ){x,ε}
+        case 'and'
+          a = _first_letter p
+          node.first_letter =
+            x:[]
+            ε: a.x `_'∪'` a.ε
+        case 'not'
+          a = _first_letter p
+          node.first_letter =
+            x:[]
+            ε: _'¬' (a.x `_'∪'` a.ε)
+        case 'optional','star'
+          a = _first_letter p
+          node.first_letter =
+            x:a.x
+            ε:[[min,max]]
+        case 'void','plus'
+          node.first_letter = _first_letter p
+        case 'multipass'
+          _first_letter p[1]
+          node.first_letter = _first_letter p[0]
+        case 'nonterminal'
+          node.first_letter ?= _first_letter grammar[p]
+    for k of grammar
+      grammar[k].first_letter ? first_letter {grammar},grammar[k]
+    for k of grammar
+      first_letter {grammar,-avoid_loops},grammar[k]
 
-  # add synthetic nonterminal to grammar
-  grammar._start = {func: 'nonterminal', params: [options.startNT]}
-
-  # link parsing functions to grammar, enable parser features
-  parser = adabru_v1_parser
-  parser = decorate_parser parser, options
-  bind_grammar grammar, parser
-  node = grammar._start
-
-  # technical parsing
-  options.stack.push [node.func, {x,x_hash:util.hash(x)}, 0, node, []]
-  ast <- promiseThenCatch parser.parse(options.stack, options.blocking_rate), _, stackTrace
-  if ast.end != x.length then ast.status = 'fail' ; ast.error = 'did not capture whole input'
-  if ast.status == 'fail' then return fulfill ast
-
-  # postprocess ast, result is of form {name:'S', children:['adf', {name:'A', children:…}, '[a-z]']}
-  pruned = (x, ast) -->
-    switch ast.name
-      case '_T'
-        [x.substring ast.start, ast.end]
-      case '_VOID'
-        []
-      case '_ALT', '_SEQ', '_VOID', '_AND', '_NOT', '_OPT', '_STAR', '_PLUS', '_NT'
-        # concat all pruned children
-        res = []
-        for element in util.flatten(ast.children.map pruned x)
+    # optimization: regex substitution
+    substitute_with_regex = (parent_precedence, node) -->
+      precedence = ['terminal' 'star' 'plus' 'optional' 'sequence' 'alternative' 'and' 'not']
+      {func,params:[p, ...ps]} = node
+      swr = substitute_with_regex (precedence.indexOf(func) ? 0)
+      child_regex = ((this_func, child) -->
+        _child_func = child.func
+        if swr(child)?
+          r = child.regex
+          if precedence.indexOf(func) < precedence.indexOf(if _child_func is 'terminal' and util.isString child.params.0 and child.params.0.length > 0 then 'sequence' else _child_func)
+            r = "(#r)"
+          r
+      ) func
+      node.precedence = precedence.indexOf func
+      node.regex = switch func
+        case 'nonterminal' then void
+        case 'void' then swr p ; void
+        case 'multipass' then swr p.0 ; swr p.1 ; void
+        case 'terminal'
+          cc_string = (ccs) ->
+            ccs.map((cc) -> "#{cc.0}#{if cc.0 != cc.1 then "-#{cc.1}" else ""}").join('').replace(/]/g, '\\]')
           switch
-            case util.isString res[res.length-1] and util.isString element
-              res[res.length-1] += element
-            case element != ''
-              res ++= element
-        res
-      case '_PASS'
-        pruned ast.x, ast.children[0]
-      default # nonterminal
-        if grammar[ast.name].flags?.pruned
-          pruned x, ast.children[0]
-        else
-          * name: ast.name
-            children: pruned x, ast.children[0]
-  return fulfill pruned x,ast
+            case util.isString p
+              ['\\\\','\\[','\\|','\\*','\\+','\\?','\\(','\\)','\\.'].reduce ((a,x) -> a.replace new RegExp(x,'g'), x), p
+            case util.isArray p and p[0] == '^' then "[^#{cc_string(p.slice(1))}]"
+            case util.isArray p                 then "[#{cc_string(p)}]"
+            case p is null                      then "[^]"
+        case 'alternative'
+          children = p.map (c) -> child_regex c
+          if children.every((c) -> c?) then children.join('|')
+          else                         then void
+        case 'sequence'
+          children = p.map (c) -> child_regex c
+          if children.every((c) -> c?) then children.join('')
+          else void
+        case 'and' then (if (s=child_regex p)? then "(?=#s)")
+        case 'not' then (if (s=child_regex p)? then "(?!#s)")
+        case 'optional' then (if (s=child_regex p)? then "#s?")
+        case 'star' then (if (s=child_regex p)? then "#s*")
+        case 'plus' then (if (s=child_regex p)? then "#s+")
+      if node.regex? then node.func = 'regex'
+      node.regex
+    for k of grammar
+      substitute_with_regex 0,grammar[k]
+
+    # add synthetic nonterminal to grammar
+    grammar._start = {func: 'nonterminal', params: [options.startNT]}
+
+    # link parsing functions to grammar, enable parser features
+    parser = adabru_v1_parser
+    parser = decorate_parser parser, options
+    bind_grammar grammar, parser
+    {parser,grammar}
+
+  processAst = (ast,grammar) ->
+    if ast.end != x.length then ast.status = 'fail' ; ast.error = 'did not capture whole input'
+    if ast.status == 'fail' then return ast
+
+    # postprocess ast, result is of form {name:'S', children:['adf', {name:'A', children:…}, '[a-z]']}
+    pruned = (x, ast) -->
+      switch ast.name
+        case '_T'
+          [x.substring ast.start, ast.end]
+        case '_VOID'
+          []
+        case '_ALT', '_SEQ', '_VOID', '_AND', '_NOT', '_OPT', '_STAR', '_PLUS', '_NT'
+          # concat all pruned children
+          res = []
+          for element in util.flatten(ast.children.map pruned x)
+            switch
+              case util.isString res[res.length-1] and util.isString element
+                res[res.length-1] += element
+              case element != ''
+                res ++= element
+          res
+        case '_PASS'
+          pruned ast.x, ast.children[0]
+        default # nonterminal
+          if grammar[ast.name].flags?.pruned
+            pruned x, ast.children[0]
+          else
+            * name: ast.name
+              children: pruned x, ast.children[0]
+    return pruned x,ast
+
+  if options.blocking_rate is Infinity
+    {parser,grammar:prepGrammar} = prepareParser grammar, options
+    node = prepGrammar._start
+    options.stack.push [node.func, {x,x_hash:util.hash(x)}, 0, node, []]
+    ast = parser.parse(options.stack, options.blocking_rate)
+    return processAst ast, grammar
+  else
+    (fulfill, reject) <- new Promise _
+    {parser,grammar:prepGrammar} = prepareParser grammar, options
+    node = prepGrammar._start
+    options.stack.push [node.func, {x,x_hash:util.hash(x)}, 0, node, []]
+    ast <- promiseThenCatch parser.parse(options.stack, options.blocking_rate), _, stackTrace
+    fulfill processAst ast, grammar

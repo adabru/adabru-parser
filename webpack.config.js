@@ -19,6 +19,7 @@ module.exports = [{
   target: 'web',
   entry: './abpv1.ls',
   output: {
+    library: 'abp',
     filename: './abp.js'
   },
   module: {
