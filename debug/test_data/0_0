@@ -1,0 +1,325 @@
+[TOC]
+
+# App Metadata
+
+📍
+- @MySQL : well known at chair
+- @las2peer : authentication handling, developed by chair
+
+OIDC authentication with @las2peer, [example](https://github.com/rwth-acis/RequirementsBazaar/blob/7a2c97be8d1176cdcf8d33a42c30b78ad8860655/etc/i5.las2peer.webConnector.WebConnector.properties) from @RequirementsBazaar or [example](https://github.com/rwth-acis/las2peer-FileService/blob/master/etc/i5.las2peer.webConnector.WebConnector.properties) from @FileService
+
+## App
+
+Semantic versioning as defined at <http://semver.org> is supported.
+
+### Data Scheme
+
+| @LAPPS
+| {app} |
+  - size, download_url, source_url, support_url, name, version, platform, supported_platform, license, description_short, description_long
+  - rating
+  - c_date, m_date
+  - author, artifacts, tags, comments
+  - {comment} → content, rating, c_date, m_date
+  - {artifact} → type, url, description
+  - {tag} → value
+| {user} |
+  - oidc_id, email, username, description, website
+  - role, date_registered
+
+| @LAPPS > PLEASE
+| {user} |
+  - oidc_id, username
+| {app} |
+  - creator
+  - description
+  - search_text (auto)
+  - platform (auto)
+  - autobuild
+  - version
+  - {comment} → creator, date, text
+  - {rating} → creator, value
+  - {media} → name, type, blob
+  - {maintainer}
+  - {buildhook} (auto)→ trigger ∊ (release, commit), url, change ∊ (sync (release only), none, commit), target_app, prefixes
+| {deployhook} |
+  - triggers = {build | commit | patch | minor | major};*
+  - target_iid
+
+Configuration is necessary per version, as older builds must work for older deployments as well as new deployments with an old version. For less complexity it shall be included in one version field.
+Buildhooks are inferred from autobuild field.
+
+### Configuration
+
+option: import from git repo
+
+| autobuild
+| * | `trigger` ∊
+
+  |`commit`|`release`
+  |triggered for every push event|triggered for every push event on a tagged branch
+| | https git repo `url`
+| | `change` ∊
+
+  |`none`|`commit`|`sync`
+  |no new version, only build triggered
+   |
+    version is incremented by its prerelease identifier, also increasing patch (or minor or major) number where necessary to follow <http://semver.org>
+
+    ```
+    'https://github.com/example/repo': {sha: '4684adf'}
+    ```
+
+    added to version's `env` field
+   |(release only) version is named same as the git tag
+
+    ```
+    'https://github.com/example/repo': {
+      sha: '4684adf',
+      tag: 'v1.0.1'
+    }
+    ```
+
+    added to version's `env` field
+| | `prefixes`, label before major number, e.g. "v" for "v0.1"
+| * |```
+  trigger: "commit",
+  url: "https://github.com/adabru/GitTraining",
+  change: "none",
+  prefixes: ["latest"]
+  ```
+
+| version, e.g. v0.1
+| env || environment variables
+| |```json
+  s1: "https://github.com/adabru/PLEASE-sample",
+  s2: "https://github.com/rwth-acis/las2peer-Template-Project"
+  ```
+| build |
+  - custom environment (container)
+    - prefabricated e.g. @maven
+    - full build shell command
+      - templates, e.g copy
+      - include tests
+    - full build + increment command
+  - OR dockerfile
+    - ✘ many commits
+    - ✔ terser in some cases
+    - ✔ bundled configuration
+    - ✘ extensions break standard
+| |
+  ```json
+  base: "node_git",
+  full: "sh -c \"git clone $s1 && ./${s1##*/}/build.sh ;
+    git clone ${s2##*/} && ./${s2##*/}/build.sh\""
+  ```
+
+  or
+
+  ```
+  base: "node",
+  full: "git clone $source && npm install && webpack",
+  inc: "git pull && webpack"
+  ```
+| deploy |
+  - default deployment
+  - download {fileset target_platform}
+  - download container as ↤`.tar`⭲ (see [here](https://www.packer.io/docs/builders/docker.html#export_path))⭰↦
+  - deploy to ROLE space
+  - deploy as web service
+    - custom environment (container)
+      - prefabricated @las2peer, ROLE widget wrapper
+      - OR commited build container
+        - ✔ save space
+        - ✔ less complex
+        - ✘ build environment may interfere
+    - start.sh (multiple processes with `...&`)
+    - logging
+    - open ports for ROLE space
+    - open ports for public
+    - (port redirects)
+  - latest build
+| |
+  ```
+  service: {
+    base: "build",
+    command: "lsc server.ls",
+    backup_files: ["./doc"]
+  }
+  ```
+
+  or
+
+  ```
+  "windows 8": ["~/win/[^/]*\.zip", "~/win/[^/]*\.gzip"],
+  "windows 10": ["~/win/[^/]*\.zip", "~/win/[^/]*\.gzip"],
+  "linux": "~/linux/[^/]*\.tar"
+  ```
+| statefulFiles |
+  - files for backup
+  - files for ROLE space upload
+    - description for deciding whether to upload
+  - files for survive update
+
+Preceding versions' configuration is merged into successor versions.
+
+---
+
+### build & deploy scenarios
+
+- incremental build yes, incremental deploy no
+- containers/images are physically stored differentially
+
+--
+
+### scenario 1
+
+- build with base + sh
+- deploy with host sh/java script
+
+  ```
+  cid=$(docker run -d deploy_base)
+  for (f in export_files)
+    cp f …/$cid/root
+  ```
+
+- `✔` incremental build available
+- `✔` custom run environment
+- `•` fast copying
+
+--
+
+### scenario 2 ✔
+
+- build with base + sh
+- deploy with base build_container
+
+- `✔` incremental build available
+- `✘` no custom run environment
+- `✔` no copying
+- `✔` app full-fledged docker image (but possibly containing build dependencies)
+
+--
+
+### scenario 3 ✔
+
+- build with base + sh
+- deploy with dynamic dockerfile
+
+  ```
+  ADD …build_cid… /
+  …
+  docker build
+  ```
+
+- `✔` incremental build available
+- `✔` custom run environment
+- `•` fast copying
+- `✔` app full-fledged docker image
+- `•` dockerfile limitations
+
+--
+
+###scenario 4 ✔
+
+- build defined as dockerfile, deployment base from build container:
+
+  ```
+  # build
+  docker build build_dockerfile
+  # deploy
+  docker run result
+  ```
+
+- `✘` incremental build limited to dockerfile
+- `✘` no custom run environment
+- `✔` no copying
+- `✔` app full-fledged docker image
+
+---
+
+### Bundle
+
+- composite
+- links to internal/frozen apps = appid + version [+ statefulFiles → new container]
+  - only accessible from containing bundle
+  - updatable from space and from bundle
+
+## Interface
+
+| path | method | body | return
+/search?q=blabla | GET | |
+  ```
+  [{
+    app: 7,
+    description: "……",
+    rating: 2.41
+  },{
+    app: 14,
+    ……
+  }]
+  ```
+/platform | GET | |
+  ```
+  ["windows 8", "Linux", ……]`
+  ```
+/platform/{all,p}?page=2 | GET | |
+  ```
+  [{
+    app: 7,
+    description: "……",
+    rating: 2.41,
+  },{
+    app: 14,
+    ……
+  }]
+  ```
+/apps/id | GET | |
+  ```
+  {
+    creator: "user1",
+    description: "#Best App!\n……",
+    autobuild: "[……]",
+    version: "{……}",
+    rating: 3.54,
+    platforms: ["Windows", "Linux"]
+  }
+  ```
+/apps/id | PUT | json |
+/apps/id | DELETE | |
+/apps/id/maintainers | POST | string |
+/apps | POST |
+  ```
+  {
+    description: "blabla",
+    version: {},
+    autobuild: []
+  }
+  ```
+ |
+  ```
+  {app: 7}
+  ```
+/apps/id/comments | GET | |
+  ```
+  [{
+    creator: "user1",
+    timestamp: 1564984,
+    text: "I like it"
+  },{
+    creator: "user2",
+    timestamp: 1786545,
+    text: "I do not like it"
+  }]
+  ```
+/apps/id/comments | POST | raw text | |
+/apps/id/comments/timestamp | DELETE | | |
+/apps/id/media/name | GET | | binary
+/apps/id/media/name | POST | binary | |
+/apps/id/rating | POST | [1-5] | |
+/hook | POST | json | github or service runner
+/hook/{iid} | PUT |
+  ```
+  { triggers: "build;major" }
+  ```
+ | register hook for deployment

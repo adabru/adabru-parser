@@ -1,0 +1,579 @@
+# 17.2.2015
+Ingrid Dorkas Internet hat nicht funktioniert, der Browser hat keine Seiten geladen. Der Laptop hat insgesamt sehr langsam gearbeitet Aviras Echtzeit-Scanner hat ca. 30 % der CPU eingenommen. in Neustarten inklusive Windows-Updates und ein Update von Antivir hat das Problem anscheinen behoben. Eventuell hilft ein Abschalten(?) des Dienstes in den Startup-Diensten. Den Echtzeit-Scanner konnte ich nicht ueber die Benutzeroberflache, taskkill, net stop oder den Taskmanager deaktivieren, Ursache Zugriff verweigert, google sagte vielleicht etwas mit einem Hardwareprofil statt Benutzerprofil.
+
+# 18.2.2015
+```bash
+wget -A pdf -r "https://felixkirchmann.de/uni/2014-15 WS/Numerisches Rechnen/"
+```
+to download all pdfs from this ftp-server
+```python
+import os, re
+[os.rename(f, re.sub(r'.*?([0-9]+).*', r'\1.pdf', f)) for f in os.listdir('.')]
+```
+to apply an regex-substitution on all folders in current directory
+
+# 11.3.2015
+Lilli Rudi wollte alle Bilder von ihren beiden Laptops auf DVDs und eine externe Festplatte brennen, um die Laptops danach leer abzugeben.
+Einige Fotos hatte sie schon gelöscht, die Wiederherstellung verlief wie folgt:
+- NTFS Undelete: Vom USB-Stick gestartet, Festplatte im Betrieb gescannt (ca. 2 Stunden), Bilder konnte man sich in kleiner Anzeige ansehen. Das alles nur um festzustellen, dass die Wiederherstellung eine kostenpflichtige Lizenz benötigt
+- Programm "Disks": "Create Disk Image..." auf die 500GB externe Festplatte. Die Laptop-Festplatte war 120GB groß. Wieder ca. 2 Stunden
+- Programm `foremost -t jpg -i 'Disk Image of sda (2015-03-15 1913).img'` erzeugt ca. 500MB(?) an jpg-Bilder, ca. 46.000 Stück
+- Programm Nautilus stockt sehr beim anzeigen der Vorschaubilder, eine Selektion ist nicht realistisch. Auch die Sortierung nach Größe funktioniert wegen des Stockens nicht. Pythonscript zum einsortieren der Bilder nach ihrer Größe:
+```python
+import os, re, sys
+#
+limit = int(sys.argv[1])
+bag = 'Kleiner_Als_' + str(limit)
+count = 0
+filesMoved = 0
+listOfFiles = os.listdir('.')
+os.mkdir(bag)
+for f in listOfFiles:
+    if os.path.isfile(f) and os.stat(f).st_size < limit:
+        os.rename('./'+f, './'+bag+'/'+f)
+        filesMoved += 1
+    count += 1
+    print str(count)+'/'+str(len(listOfFiles))
+print '\n'+str(filesMoved)+' Files moved.'
+```
+
+    (Zum Testen:
+    ```bash
+for i in {1..100} ; do dd if=/dev/zero of=./"File_$i" bs=1K count=$i; done
+    ```
+    alle Dateien verschieben:
+    ```bash
+for f in ./Kleiner_Als_50000/* ; do mv "$f" "./$(basename "$f")" ; done
+    ```
+    )
+
+
+# 31.3.2015
+- Wie kriege ich einen Kündigungswecker hin? Die Anbieter sind bisher nur Internet- oder Telefonabieter oder Ähnliches, ohne die Möglichkeit, die Emails zu verwalten.
+- Gibt es eine Möglichkeit mit Verwaltung der Emails? Ja! Suche nach Stichwort "email scheduling" ergibt gute Treffer. Meine Wahl: `lettermelater.com`
+- Gibt es eine kostenlose Webshop-Vergleichssoftware, mit Vorteil z.B. in der Angebotsfilterung und Anzeige?
+- Wie kann ich Youtube-Videos downloaden? KeepVid?
+
+# 4.4.2015
+- Wie kann man für Meshlab Hotkeys einrichten?
+- Erster Versuch: Im Meshlabverzeichnis suchen:
+`vim /usr/bin/meshlab`
+→ `/\/meshlab`
+Ergebnis: `/usr/lib/meshlab`
+Suche im Ordner nach "Key":
+`for f in ./* ; do grep -i -a key "$f" ; done`
+erfolglos
+
+- Browsersurfen, Inspiration von den Hotkeys:
+Meshlab kompilieren (Google)
+List of Free and Open-Source Software (Wikipedia)
+	Free Plotting Software
+	* R visualization-language, statistics
+	* Metapost
+	* TikZ
+
+  Dasher (Texteingabe über Maus mit Buchstabenhäufigkeit)
+	ParaView (Interaktive Visualisierung für "Mess"daten)
+	Visualization Toolkit, VTK
+
+	Free learning support software
+	Free content management systems
+	Free wiki software
+	Free emulation software
+	Free virtualization software
+	Free groupware ("collaboration")
+	Free integrated development environments (ca. 50)
+adminer.org (phpMyAdmin Upgrade)
+- Bash-History ist zu klein:
+`vim ~/.bashrc`
+`HISTSIZE, HISTFILESIZE`
+- neues Firefoxprofil "i5-Projekt" für den HIWI-Job
+- neuer Shortcut "Shutdown", `gnome-session-quit --power-off --force` für shutdown, Ctrl+Alt+P: funktioniert nicht.
+Stattdessen kurz den Power-Button drücken
+
+# 5.4.2015
+- Ich möchte Adminer, ein webbasierter SQL-Client, startbereit haben, um SQL-Datenbanken zu bearbeiten, z.B. mit Hinblick auf eine Compilerübersicht. Wie kann man einen lokalen php-Server für Adminer starten?
+`sudo php -S 127.0.0.1:80 -t .`
+- Wie kriegt man einen schnellen Zugriff auf die Seite?
+-> erste Idee: Konfiguration von `/etc/hosts`
+-> zweite Idee (aus Forum): Firefox-Bookmarks verwalten-keyword
+-> Desktop-Launcher erstellt, es ins Dash zu bekommen, ist aber zu kompliziert
+- Ich möchte für die meshlab-Kompilierung sehen, welche Dateien von *vcglib* abhängen.
+```bash
+for f in $(find) ; do grep vcglib $f ; done
+```
+- Ich will die Kompilierzeit vergleichen, wenn der Code auf der SSD oder auf einer Ramdisk ist.
+```bash
+sudo mount -t tmpfs -o size=1024m tmpfs /media/ramdisk
+time make -j 2
+```
+Nach restart von SSD: 37.216s
+Nach restart von ramdisk: 37.517s
+Also kein Gewinn.
+- Um in meshlab Hotkeys zu setzen, gibt es folgende Schnittstelle:
+`.../src/meshlab/mainwindow_init.cpp`, `void MainWindow::fillFilterMenu()`, als Parameter von `QAction`
+
+# 10.4.2015
+- Um ein generisches Script zu erzeugen, brauche ich was ich mal gemacht habe: automatisches Ersetzen eines Strings in einer Datei und das Schreiben der neuen Datei. Ich hab das mal für die .desktop's gemacht und es aus der bash-history rauskopiert:
+```bash
+perl -pe 's/Test/Compiling/g' Test.desktop > Compiling.desktop
+chmod 777 Compiling.desktop
+```
+
+- Den Ort eines Skripts kann das Skript über `${BASH_SOURCE[0]}` herausfinden
+- Den Ort eines py-Skripts kann man über
+`os.path.dirname(os.path.realpath(sys.argv[0]))`
+herausfinden
+- Um die Scans des Hirnstammes zu vereinfachen, habe ich gemacht: Reconstruction, Decimation, UV-Mapping, Texturing. In ein Skript gepackt war die Qualität auch überzeugend:
+```bash
+for f in ./*.ply
+do python ./meshlabserver_script/hirnstamm_mesh.py $f $(basename -s ply $f)_mod.ply
+done
+```
+
+    hirnstamm_mesh.py:
+    ```python
+    import os, sys, re
+
+    print("Usage: program inputmesh.ply outputmesh.ply")
+    if len(sys.argv) < 3 :
+        quit()
+    inputmesh = sys.argv[1]
+    outputmesh = sys.argv[2]
+
+    tmpmesh = "tmp_Not_Textured.ply"
+    scriptfolder = os.path.dirname(os.path.realpath(sys.argv[0]))
+    filter1 = "tmp_Filter1.mlx"
+    filter2 = "tmp_Filter2.mlx"
+
+    def generateFile( inputPath, outputPath, match="", replacement="" ) :
+        with open(inputPath,'r') as inFile, open(outputPath,'w') as outFile :
+            for line in inFile :
+                outFile.write( re.sub(match, replacement, line) )
+
+    generateFile( scriptfolder+os.path.sep+"hirnstammfilter_1.mlx.generic", filter1 )
+    if 0 == os.system("meshlabserver -i "+inputmesh+" -o "+tmpmesh+" -s "+filter1+" -om wt") :
+        os.remove(filter1)
+
+    texturename = os.path.splitext( os.path.basename( outputmesh ) )[0]
+    generateFile( scriptfolder+os.path.sep+"hirnstammfilter_2.mlx.generic", filter2, "TEXTURE.png", texturename+".png" )
+    if 0 == os.system("meshlabserver -i "+tmpmesh+" "+inputmesh+" -o "+outputmesh+" -s "+filter2+" -om wt"):
+        os.remove(filter2)
+        os.remove(tmpmesh)
+    ```
+- Um das Skript hier einzufuegen, habe ich das hier benutzt:
+```bash
+perl -pe 's|^|>> $1|g' hirnstamm_mesh.py > tmp
+```
+- Um eine binäre Datei darzustellen:
+```bash
+od -t cx2 file
+```
+
+# 13.5.2015
+Um die Größe eines Meshs zu bestimmen, muss die Größe mehrerer Dateien in Summe genommen werden. Das kann der folgende Befehl.
+```bash
+du -c -b file1 file2 ...
+du -b -c --exclude=preview .
+```
+
+# 20.5.2015
+Für Musik:
+http://kxstudio.sourceforge.net/Repositories: package-sources von kxstudio installiert
+```bash
+sudo apt-get install cadence
+sudo apt-get install wineasio
+```
+
+http://ubuntuforums.org/showthread.php?t=1723404:
+ empfiehlt Reaper, um VSTs zu benutzen, mit wine/wineasio(60 Tage Evaluation, 60$, Lizenz "optional")
+http://www.reaper.fm/
+wineasio:
+http://kxstudio.sourceforge.net/Documentation:Manual:wineasio_and_reaper
+```bash
+regsvr32 wineasio.dll
+wine64 regsvr32 wineasio.dll
+```
+
+QJackCtl schaltet Systemsound ab:
+https://help.ubuntu.com/community/UbuntuStudio/ProAudioIntro/1204#The_Pulse_Audio_to_Jack_Bridge_-_using_both_at_once
+```bash
+sudo apt-get install pulseaudio-module-jack
+sudo apt-get install jackd2
+```
+start QJackCtl-server → PulseAudio Volume Control → Output Devices → set jacksink as fallout device
+
+Ardour scheint toll zu sein
+
+Ich möchte CAPS als Verstärker-plugin einbinden. CAPS sind eine Sammlung von LADSPA-plugins. Es ist im repository von kxstudio drin.
+http://wiki.ubuntuusers.de/Ardour#Einbindung-ueber-JACK-Rack
+```bash
+sudo apt-get install caps
+sudo apt-get install jack-rack
+```
+LADSPA-plugins sind in `/usr/lib/ladspa` als `*.so` Dateien gespeichert. In Jack-Rack kann man unter "uncategorized" z.B. die CAPS-Plugins auswählen.
+Installiert: amsynth
+
+#21.5.2015
+Um in Dateien eines Ordners ,ausgeschlossen Binärdateien, zu suchen:
+```bash
+grep -r -I "/openapp.js" .
+```
+
+#26.5.2015
+Als ich **Haroopad** installiert hatte, konnte ich es nicht im Nautilusmenü bei `Open with...` anwählen. In `/usr/share/applications/Haroopad.desktop` die Zeile `Exec=haroopad %f` musste ergänzt werden. Wenn die `.desktop` Datei nicht dort ist, muss sie in `~/.local/share/applications` sein.
+
+Um in `bash` Zeichen hinten von einem String wegzustreichen kann man `${PATH::-3}` verwenden (nur in `bash`).
+
+Die Farbe in `bash` lässt sich über die Variable `PS1` steuern. Mein default:
+`\[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$`
+Um auf gelb zu ändern, z.B.:
+```bash
+PS1=`(echo $PS1 | sed 's/3.m/3'3'm/')`
+```
+# 28.5.2015
+Für Bennenung der Workspaces kann man *CompizConfig*, Menüpunkt `Window Management → Workspace Naming` verwenden. Eventuell muss man noch Extraeinstellungen installieren.
+
+# 3.6.2015
+Ich möchte in `TexStudio` automatisch fehlende packages installieren. `TexLive` unterstützt das nicht nativ.
+```bash
+tlmgr install texliveonfly
+```
+Dann in `TexStudio`:
+Changing `pdflatex -synctex=1 -interaction=nonstopmode %.tex` to `texliveonfly %.tex`.
+
+# 5.6.2015
+Um eine Datei hexadezimal anzuzeigen, kann man `xxd` verwenden (oder `hexdump`).
+
+Freien Platz in einer Partition kann man sich mit `df -h` anzeigen lassen.
+
+# 6.6.2015
+Kurze Beschreibung zur Prozessanzeige:
+- Grafische Variante `System Monitor` (`gnome-system-monitor`)
+- `top` Konsolenprogramm, zeigt nur die Prozesse mit größtem Ressourcenverbrauch an
+- `ps aux` listet alle Prozesse auf
+- `htop` featureich in der Konsole
+	- `shift-I` Kehrt Sortierrichtung um
+
+Für Datenrettung einer defekten Platte wird `ddrescue` aus dem package `gddrescue` empfohlen.
+
+Als kostenloase Virenentferner werden `ADWCleaner`(nur für Adware, keine Administratorrechte) und `Malwarebytes` (nicht für externe Partitionen/OS gedacht sondern für aktuell laufendes. `ADWCleaner` ist portable, `Malwarebytes` nicht (Freeware mit Premiumversion).
+
+Coole Windowsprogramme mit einer Größe jeweils kleiner als 1MB werden hier vorgestellt:
+http://www.chip.de/bildergalerie/Die-kleinsten-Tools-der-Welt-Galerie_47180171.html
+Die, die mich angesprochen haben:
+- `VideoCacheView` Im Browser angesehene Videos aus dem Cache kopieren
+- `WirelessKeyView` WLAN-Schlüssel anzeigen
+- `Volumouse` Systemlautstärke über Keyboard und Maus ändern
+- `SmartSniff` Netzwerkverbindungen anzeigen
+- `SiteShoter` Screenshot einer Webpage machen
+- `HoeKey` Hotkeys erstellen
+- `WebVideoCap` Speichert im Browser laufende Videos
+- `Streamosaur` Systemsound abspeichern
+- `Capster` Startet bei Systemstart ein Programm, fasll die Feststelltaste aktiv ist
+
+Mama wollte die Predigt vom letzten Sonntag gebrannt haben. Die Dateien waren in `.wav`-Format. Sie sind 400MB groß, auf die CD passen 700MB. Hab zuerst gedacht sie in `.mp3` umzuwandeln, war dann aber nicht nötig. Trotzdem, dafür kann man `lame` installieren und dann mit `lame input.wav output.mp3`.
+
+# 8.6.2015
+
+Für die Computeralgebrahausaufgaben musste ich ein Polynom in ein anderes einsetzen. Mit `octave`:
+```matlab
+f = [1 -4 13 -4 15]
+g = [1 1]
+function res=fvong(f,g)
+	res = [0 0]
+    for i = 1:numel(f)
+    	g_ = [0 1]
+        for j = 1:i-1
+        	g_ = conv(g_,g)
+        end
+        res = prepad(res,numel(g_)) + f(end+1-i)*g_
+   end
+end
+```
+
+# 19.6.2015
+
+Heute sollte ich ein hochauflösendes Bild von der Anatomie-Website machen. Das hat leider nicht so schnell geklappt wie ich es mir gedacht habe.
+
+#####`Firefox` & `Chromium`
+Firefox hat addons um Screenshots zu machen. Den einzigen Mehrwert den sie haben, ist dass man die Bilder annotieren kann. Sonst kann man nämlich die in Firefox eingebaute Funktion nutzen: `Shift-F2 (Commandline)`→`screenshot --fullpage`.
+Nun soll die Seite in einer höheren Auflösung aufgenommen werden als der Display meines Laptops. Dafür habe ich dann den Responsive-Mode-Tester von Firefox ausprobiert: `Shift-F2`→`resize to 5000 5000`. Dabei ist das Kopfmenü aber unterproportional klein geworden. Man kann es größer und detaillierter machen, indem man in Firefox zoomt.
+
+Gut wäre ein addon, das direkt für eine bestimmte Auflösung und einen bestimmten Zoomfaktor eingestellt werden kann und den Screenshot erstellt. So etwas habe ich aber bei keinem addon gefunden. Ihre Funktionalität war für meinen Zweck deckungslgeich mit dem Firefox-screenshot. Dieser funktioniert aber nur dann wie erwartet, wenn man die Seite nicht zoomt. Wenn man die Webseite zoomt, verschlechtert sich im Screenshot die Qualität.
+
+Da habe ich in Chrome/Chromium gesucht. Es gibt das addon `Full Page Screen Capture`, welches im Browser das Fenster entlang der Scrollbalken scrollt und dabei die Screenshots macht. Allerdings kann man im Device-Emulator von Chromium nicht scrollen. Ein anderes addon habe ich nicht viel gesucht, bin aber nicht sicher, ob es so etwas für Chromium gibt.
+
+Das Chromium-addon `Full Page Screen Capture` mit der scrollenden Funktion und en Scrollbalken aus Firefox Responsive-View-Mode hätte mein Problem lösen können.
+
+Ich habe ein externes Programm, `cutycapt` ausprobiert:
+```bash
+cutycapt --min-width=4096 --min-height=4096 --zoom-factor=5 --out=./snapshot.png --url=http://localhost:100/src/views/model_viewer.php?id=121
+```
+Es verwendet `webkit` als Renderer und hat die passenden Optionen, allerdings unterstützt es kein WebGL was in meinem Fall zu einer Fehlermeldung auf der Seite geführt hat, die das Bild ruiniert hat. Ansonsten ist das wahrscheinlich eine gute Möglichkeit.
+
+Ich habe `shutter` installiert. Das Programm kann auch Fenster, Fenstermenüs, Tooltips und Screenregionen abfotografieren. Und man kann annotieren. Bei Internetseiten kann man allerdings nur die Url angeben.
+
+Dann habe ich von `xrandr` erfahren (das gleiche wie im Praktikum): `xrandr --output LVDS1 --panning 5000x5000`, das erhöht die Bildschirmfläche (pan) und man kann mit der Mausbewegung navigieren.
+
+Schließlich:
+- Menü
+	- `xrandr --output LVDS1 --panning 5000x5000`
+	- Chromium
+	- zoomen
+	- `Full Page Screen Capture`
+- Modell
+	- Firefox
+	- positionieren
+	- `resize to 5000 5000`
+	- `screenshot --fullpage`
+- Mit `gimp` zusammenschneiden
+
+# 22.6.2015
+
+##### Ubuntu-Neuinstallation
+Samstagnachts (20.6.) habe ich Olga Schabunins Laptop abgeholt, um darauf Windows neuzuinstallieren. Dabei habe ich aus Versehen`rm ~/.avfs/*` aufgerufen, wobei `.avfs` ein Loopdevice auf `root` war. Dabei wurden in der Konsole einige Meldungen `..not permitted..` ausgegeben und ich habe den Prozess beendet. Danach hat der Laptop in die Grub-Konsole gebootet, nicht mehr in Ubuntu. Angezeigt wurde ungefähr `error: lvmid disk not found`.
+
+Per `rm` gelöschte Dateien kann man nicht einfach wiederherstellen, es gibt `extundelete`, allerdings kann es keine Dateipfade wiederherstellen und es arbeitet so ähnlich wie z.B. `foremost`.
+
+Zuerst habe ich mir überlegt, fehlende Dateien von Slavas Ubuntu-Installation auf meine Platte zu kopieren. Dafür wollte ich dann so etwas wie `NAS4Free` verwenden. Ich hab das auch kurz gestartet, allerdings habe ich es mir dann anders überlegt.
+
+Ich wollte nämlich erst versuchen, über die Grub-Konsole zu booten:
+```bash
+ls
+set root=(lvm/VolGroup-root)
+linux /vml<Tab-Key>
+→ linux /vmlinuz.old root=/dev/mapper/<Tab-Key>
+→ linux /vmlinuz.old root=/dev/mapper/
+initrd /initrd.img
+boot
+```
+Normalerweise müsste die Datei `vmlinuz` als Softlink zu `/boot/vmlinuz-3.2.042...` (irgendein Kernel) vorhanden sein und das Device `/dev/mapper/VolGroup-root` existieren, tun sie aber beide nicht und der Code führt zu einem Fehler.
+
+Da habe ich überlegt, Grub neuzuinstallieren und dafür die Konsole von `clonezilla`-Live zu verwenden:
+- Clonezilla-Terminal booten
+- `ls /mnt` -- `sudo mount /dev/VolGroup-root /mnt`
+- ```
+  sudo mount --bind /dev /mnt/dev
+  sudo mount --bind /dev/pts /mnt/dev/pts
+  sudo mount --bind /proc /mnt/proc
+  sudo mount --bind /sys /mnt/sys
+  ```
+- `ls /` -- `sudo chroot /mnt`
+- `grub-install /dev/sda`
+- `grub-install --recheck /dev/sda`
+- `update-grub`
+
+Das hat nicht funktioniert. Da habe ich mir überlegt, den Kernel (inklusive `vmlinuz`) neuzuinstallieren:
+- Bis `chroot` inklusive so wie oben
+- `ifconfig`/`ping 8.8.8.8` -- `sudo dhclient eth0`
+
+    An dieser Stelle funktioniert noch kein Domainname-Resolving. Normalerweise übernimmt `Network Manager` die Konfiguration der Netzwerkschnittstellen und auch des DNS, allerdings startet er erst, wenn man sich als Benuzter einloggt. Manuell starten hat bei mir nicht funktioniert, Fehler irgendwas mit `..upstart service .. not permitted..`.
+    Weder das Editieren von `/etc/network/interfaces`
+    ```
+    iface eth0 inet dhcp
+        dns-nameservers 8.8.8.8 8.8.4.4
+    ```
+    noch von `/etc/dhcp/dhclient.conf`
+    ```
+    interface "eth0" {
+        prepend domain-name-servers 8.8.8.8;
+    }
+    ```
+    haben bei mir funktioniert, aber das Hinzufügen in `/etc/resolv.conf` von
+    ```
+    nameserver 8.8.8.8
+    ```
+    hat funktioniert, auch wenn dort steht `#     DO NOT EDIT THIS FILE BY HAND -- YOUR CHANGES WILL BE OVERWRITTEN` und diese Datei von `resolvconf` in bestimmten Fällen überschrieben wird.
+    Informationen zu DNS unter Linux findet man unter http://www.stgraber.org/2012/02/24/dns-in-ubuntu-12-04/
+
+- `apt-get install linux-image-generic`
+	Hier sollten theoretisch irgendwelche Setup-Skripte laufen (und unter anderem `vmlinuz` erzeugen?), taten sie bei mir aber nicht. Eine detaillierte Anleitung zur Neuinstallation des Kernels findet man hier http://help.ubuntu.com/community/Lubuntu/Documentation/RemoveOldKernels (unten ist ein Link zur Neuinstallation) und hier http://askubuntu.com/questions/28099
+
+Da habe ich beschlossen, Ubuntu neuzuinstallieren.
+
+`cp -u source/* dest` um nicht existierende Dateien zu kopieren. Besser ist `rsync`.
+
+# 26.6.2015
+
+Um einen Prozess im Terminal in den Hintergrund zu setzen:
+- `Ctrl`-`Z`
+- `bg`
+
+Direkt im Hintergrund starten:
+- `haroopad &`
+Das Terminal kann man dann mit `Ctrl`-`D` schließen. Wenn man das Terminal allerdings mit dem roten Kreuz schließt, schließen sich auch alle Jobs.
+
+
+# 3.7.2015
+
+Heute habe ich mir eine neue 64GB-SSD ("FASTDISK", 30$ → 27€) und ein rotes 2.5'-Gehäuse dazu. Jetzt möchte ich meine Platten und Gehäuse benchmarken. Ich mache alle Tests am ersten USB-Port vorne links mit den Befehlen
+- `sudo mount /dev/sdxx /mnt`
+- `time dd if=/dev/zero of=/mnt/ddTest bs=1M count=500 conv=fdatasync`
+- `time dd if=/mnt/ddTest of=/tmp/ddTest bs=1M count=500 conv=fdatasync`
+
+(siehe https://romanrm.net/dd-benchmark)
+Ergebnisse:
+- HAMA-Stick (FAT):
+	- 70,2149 s, 7,5 MB/s
+	- circa 140 MB/s
+
+`dd` gibt mir nicht die gewünschten Ergebnisse. Um Zeit zu sparen und mich nicht mehr damit zu beschäftigen, verwende ich jetzt das Benchmarking-Feature von `Disks` mit Parametern n=50, 10MB für Block und n=1000 für Access:
+
+Device                   | Read [MB/s]   | Write [MB/s]                | Access Time [msec]|
+-                        |-              |-                            |-                  |
+HAMA-Stick (FAT)         | 13,1          | 4,4                         | 0,98              |
+500GB (NTFS)             | 71,3(falling) | 112,2(falling)              | 18,00             |
+32GB-SSD (FAT)           | 175,1         | 27,1 ('dd' test shows 50,1) | 0,40              |
+500GB (NTFS), Drive2Go   | 40,6          | 43,1                        | 17,98             |
+internal 128GB-SSD (FAT) | 416,3         | 140,9                       | 0,13              |
+64GB-SSD (NTFS)          | 170,4         | 29,2                        | 0,51              |
+
+# 5.7.2015
+
+Heute habe ich beim Aufräumen die ChromaDepth-Brille gefunden und wollte sie auf 3d-Modelle ausprobieren. Im Internet habe ich mit ein wenig Recherche keine Möglichkeit gefunden, deshalb habe ich in Meshlab nachgeschaut:
+- `Filters`→`Color Creation and Processing`→`Per Vertex Color Function`
+- Kreuz bei `preview`
+- Zwei Modelle:
+	- `r = (z<-200)?255:0`
+	- `g = (z>-200 && z<100)?255:0`
+	- `b = (z>100)?255:0`
+- und:
+	- `r = min(255,max(0,-z-150))`
+	- `g = min(255,max(0,-abs(z+50)+255))`
+	- `b = min(255,max(0,z))`
+
+# 11.7.2015
+
+Ein Backup von `/home/adabru/` (`.sqsh` 21.3GB)  und `/dev/mapper/VolGroup-Windows/`  mit
+```bash
+sudo apt-get install squashfs-tools
+mksquashfs /home /media/adabru/SATAExtern/11-7-2015-home.bak.sqsh
+sudo mount ./11-7-2015-home.bak.sqsh /mnt
+```
+(http://www.tldp.org/HOWTO/SquashFS-HOWTO/creatingandusing.html → steht auch wie man UnionFS macht)
+
+```bash
+dd if=/dev/mapper/VolGroup-Windows | gzip > ./DD-DD-DDDD-Win.dd.gzip
+```
+
+# 8.9.2015
+
+`rename` mit `-n` am Ende verwenden für Vorschau
+
+Um die Dateien `1.png`, `12.png`, `6_1_2.png` in `init_01.png`, `init_02.png`, ... umzubenennen:
+```bash
+rename 's/.*/our $i=1 unless defined $i; sprintf("init_%02d.png",$i++)/e' $(ls -v -I bak)
+```
+
+Für `ls -v` in `perl` ging es in diese Richtung:
+```bash
+rename
+'my @d=/\d+/g;
+for(@d){$_=substr "000".$_, -3;}
+$_=substr join(":",@d).":000:000",0,11;'
+```
+
+# 23.9.2015
+
+Interessante Firefox-addons: http://www.zdnet.com/pictures/essential-firefox-add-ons-to-improve-your-productivity/
+- LeechBlock (Seiten selber blocken)
+- Tile View
+- LastPass (für Leute, die Firefox verwenden)
+- WiredMarker
+
+# 12.10.2015
+
+Da `ubuntu.mirror.atratoip.net` nicht erreichbar war, habe ich es in `/etc/apt/sources.list` auskommentiert (ca. 12 Zeilen). Klappt bisher wunderbar.
+
+Wenn ich mich auslogge, kann ich mich nicht mehr ausloggen. Fehler: `Invalid password...`. Auch das Löschen und `chown`en vn `.Xauthority`, `.ICEauthority` und `/home/adabru` hat nichts gebracht. Deshalb:
+- Backup von `/home/adabru`
+- Erstellen des users `nurkurz`
+- Löschen von `adabru` mit `Keep Files`
+- Erstellen von `adabru`
+
+Hat nicht funktioniert. Hab `lightdm-gtk-greeter` installiert, jetzt ist zwar ein anderes Login-Fenster da, dafür funktioniert es.
+
+# 24.10.2015
+
+Nikitas Windows-Laptop hat mal nicht richtig gestartet. Man konnte aber auch nicht einfach so ins BIOS hinein. `shutdown.exe /r /o` hat geholfen.
+
+# 18.12.2015
+
+Wollte in die role-sandbox zum testen lokale widgets verwenden. Portweiterleitung hat mit der Box von Unitymedia nicht funktioniert, im Internet stand, dass das mit 'dual stack lite' nicht funktioniert:
+- Auf http://freedns.afraid.org die subdomain adabru.naru.to als AAAA-record erstellt
+- Als dyndns eingestellt
+- `curl "http://adabru:goodluck@freedns.afraid.org/nic/update?hostname=mitfr.us.to"`
+    → Fall IPv6: `&myip=$(ip -4 -o address show scope global | head -n 1 | perl -pe '/inet ([^\/]*)/;$_=$1'` hinzufügen
+        - sowohl `ddclient` als auch `inadyn` unterstützen seit Jahren kein ip6, nur mit Patch, den man manuell installieren muss
+    → Fall IPv4: Router Port-Weiterleitung einstellen
+
+# 22.01.2016
+
+Auf <cocos2d-x.org/js-tests/> wollte ich ein Sprite verändern. Im Beispielcode steht der Variablenname, allerdings weiß ich nicht wie ich aus der Konsole auf ihn zugreifen kann. Statt im Code danach zu suchen, hab ich ein Skript dafür gemacht.
+
+# 2.5.2016
+
+Ich hab jetzt Windows auf einer externen Festplatte installiert und das aus Virtualbox gelöscht. Damit kann Windows aber nicht mehr auf die LVM-Partitionen zugreifen. Um das zu lösen installiere ich Ubuntu neu ohne LVM. Das sollte theoretisch auch den Bootvorgang beschleunigen. Außerdem update ich von 14.04 auf 16.04.
+
+# 19.9.2016
+
+Fand http://www.text-image.com/ sehr schön.
+
+📆2016-12-9
+
+🚹Vanessas Laptop did not retrieve a dynamic IP
+
+- setting static connection[¹](https://answers.microsoft.com/en-us/insider/forum/insider_wintp-insider_web/windows-10-tp-cannot-get-an-ip-address-from-my-new/1358eb18-85cb-4b08-944f-95aea2053619?tab=question&status=AllReplies#tabs): ✔ Ok for house router ✘ Not Ok for Smartphone Hotspot
+  - router: mac-ip-mapping entry
+  - laptop: ip4 ip-netmask(255.255.255.0)-gateway(192.168.1.254 genexis) + dns (google 8.8.4.4 8.8.8.8)
+- after reset to dynamic, house router still works (maybe only because of lease time?)
+- └▪netsh winsock reset↵[¹](http://serverfault.com/a/277559/389911) + reboot did it (as admin)
+
+useful commands:
+
+- └▪arp -a↵
+- └▪ipconfig /ALL↵
+- └▪getmac↵
+- └▪traceroute↵
+
+📆2016-12-10
+
+Daniel Klee asked for links of where to buy electronic equipment. So here is a list:
+
+- programmer USBASP with 0V/3.3V/5V
+  - [3,64€ ebay Deutschland](http://www.ebay.de/itm/USBASP-USBISP-AVR-51-Programmer-Adapter-mit-10-Pin-Kabel-ATMega-ATTiny-ATMEGA128-/152342805414?hash=item237856bba6:g:i2MAAOSw34FVFyCO)
+  - [1,65€ ebay China](http://www.ebay.de/itm/51-AVR-Atmega8-Programmer-USBasp-USBISP-10-Pin-USB-Programmer-3-3V-5V-w-Cable-/380876438916?hash=item58ae013d84:g:ti0AAOSwHMJYIAvd)
+  - [1,10€ aliexpress](https://www.aliexpress.com/item/1LOT-New-USBASP-USBISP-AVR-Programmer-USB-ISP-USB-ASP-ATMEGA8-ATMEGA128-Support-Win7-64/32727211265.html)
+- steckbrett (breadboard) 400 punkte
+  - [3,50€ ebay Deutschland](http://www.ebay.de/itm/Mini-Breadboard-Steckboard-Steckbrett-Experimentierboard-400-Kontakte-/192025517605?hash=item2cb59cde25:g:PNUAAOSwv9hW5Ehz)
+  - [1,25€ ebay China](http://www.ebay.de/itm/Breadboard-Steckbrett-Mini-400-Kontakte-Point-Raspberry-Arduino-CNC-3D-Drucker-/401176237904?hash=item5d67f79750:g:r9UAAOSw-itXvYgO)
+  - [0,90€ aliexpress](https://www.aliexpress.com/item/Free-Shipping-1pcs-DIY-400-Points-Solderless-Bread-Board-Breadboard-400-PCB-Test-Board-for-ATMEGA/32657614549.html)
+- 40 steckverbinder (jumper wire)
+  - [3,20€ ebay Deutschland](http://www.ebay.de/itm/40x-10cm-2-54-mm-Dupont-Jumper-Kabel-Verbindungskabel-Arduino-Raspberry-Pi-Board-/322208773834?var=&hash=item4b0523b6ca:m:m6hosfcdxDVfW_nJRJ1P8MQ)
+  - [1,00€ ebay China](http://www.ebay.de/itm/40PCS-Male-To-Male-Dupont-wire-cables-jumpers-10CM-2-54MM-1P-1P-For-Arduino-GE-/272319137069?hash=item3f677c452d:g:09IAAOSwqfNXlc8X)
+  - [0,72€ aliexpress](http://www.ebay.de/itm/Breadboard-Steckbrett-Mini-400-Kontakte-Point-Raspberry-Arduino-CNC-3D-Drucker-/401176237904?hash=item5d67f79750:g:r9UAAOSw-itXvYgO)
+- LEDS
+  - [1,39€ 10 schwache grüne LEDs](http://www.ebay.de/itm/10Stk-Led-5mm-grun-diffus-normale-Leuchtkraft-/262737664475?hash=item3d2c6299db:g:mxEAAOSwS7hW~kHO)
+  - [1,34€ 100 weiße LEDs](https://www.aliexpress.com/item/100PCS-5mm-super-bright-white-light-emitting-diode-DIP-LED-straw-hat-astigmia/32717823133.html)
+- [1,73€ 10 3V Knopf Batterien aliexpress](https://www.aliexpress.com/item/10pcs-lot-CR2032-Lithium-Button-Cell-Batteries-ECR2032-DL2032-KCR2032-EE6227-3V-220mAh-Rohs/32648145261.html)
+- [1,24€ 2 Attiny13 Microcontroller aliexpress](https://www.aliexpress.com/item/2Pcs-ATTINY13A-PU-ATTINY13-ATTINY13-Microcontroller-IC-New/32639251395.html)
+
+auch mal Gebote schauen
+
+📆2017-1-12
+
+To install a local `.deb` package file and its dependencies manually[¹](http://superuser.com/a/196867):
+
+```
+dpkg -i greenfoot
+apt-get update
+apt-get install -f
+dpkg -i
+```
+
+📆2017-2-5
+
+Windows show WLAN password: └▪netsh wlan show profiles name-"Brunnmeier" key=clear↵
+
+In Ubuntu: └▪sudo cat /etc/NetworkManager/system-connections/Brunnmeier | grep psk↵

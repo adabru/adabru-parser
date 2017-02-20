@@ -1,8 +1,9 @@
 #!/usr/bin/env lsc
 
 do ->
+  log = console.log
   help = ->
-    console.log '''
+    log '''
 
 
     \033[1musage\033[0m: abp [options]
@@ -19,14 +20,35 @@ do ->
                            after grammar file
           -d               enter debug mode even on success
 
+        abp \033[1mbench\033[0m dir grammar_number file_number
+
+          files used for benchmark are
+            • <dir>/<grammar_number>.grammar
+            • <dir>/<grammar_number>_<file_number>
+            • <dir>/<grammar_number>.json (cached)
+
+        abp \033[1mverify\033[0m dir grammar_number file_number [--init]
+          --init           create oracle from parse result
+
+          files used for verifying are
+            • <dir>/<grammar_number>.grammar
+            • <dir>/<grammar_number>_<file_number>
+            • <dir>/<grammar_number>.json (cached)
+            • <dir>/<grammar_number>_<file_number>.oracle
+
     \033[1mExamples\033[0m
-    echo "i == 5" | abpv1 bash.grammar -i --nt EXPRESSION
-    abpv1 regex.grammar -c > jo.json
+    printf "i == 5" | abp -g bash.grammar -i- --nt EXPRESSION
+    abp -o jo.json
+    abp verify ./debug/test_data 0 2
+    abp bench ./debug/test_data 0 2
 
     '''
 
   # parse arguments
   argv = require('minimist') process.argv.slice(2), {}
+
+  if argv._.0 is 'bench' then return (require './debug/benchmark.ls')!
+  if argv._.0 is 'verify' then return (require './debug/verify.ls')!
 
   # invalid arguments
   if argv._.length > 0 or (Object.keys argv).length == 1 or not (Object.keys argv).every ((k) -> k in ['_','g','i','nt','o','d'])
@@ -35,7 +57,6 @@ do ->
   # define grammar
   require! [fs,path]
   error = (s) -> console.log '\033[31m'+s+'\033[39m'
-  log = console.log
   stackTrace = (e) -> error e.stack
   checkFile = (file, isok=->true, iswrong=->false) ->
     try fs.accessSync file; isok!

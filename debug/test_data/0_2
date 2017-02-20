@@ -1,0 +1,88 @@
+[TOC]
+
+# spec
+## hi jo
+### jaja
+
+📍 Jack the Ripper
+- London
+- dangerous
+
+|some|header
+|a||multispan
+|item|b| |c
+|
+  |nested
+  |table
+
+ℹHier Info
+nicht mehr
+
+⚠ Hier
+Achtung!
+
+🌲 some/name/
+file with info
+tree more info
+  almost same as list
+
+🌲 ↑http://auto/link/
+some/image.png example image
+
+some text
+
+- multi
+  - level
+    - unordered list
+  - ja
+- ja
+
+1. ordered
+2. list
+
+```apache
+inline
+code
+```
+
+```js
+```↑ ./import/me.js nocomments
+
+--- presi
+
+slide 1
+
+-↓
+
+slide 1.1
+
+-↓
+
+slide 1.2
+
+--
+
+slide 2
+
+--
+
+slide 3
+
+---
+
+
+Klick [mich][] jo
+
+[mich]: http://weag.com
+
+> some
+> citation
+> > with other
+> > citation
+
+
+*emph1*  **emph2**  ***emph3***  `code` 'simple"  highlight'
+⎡./my/iframe.html
+![](./image/without.alt)  [Text `code`]((./images/hover.gif))  <http://go.com>
+⌨Ctrl E 𐌎 Cocos2D JS™ ↑./images/nobreak space/all_good.gif ↑/home/adabru/ @Sprite └▪grep -r d .↵
+↤some⭲verylong⭰word↦ 📆11/16

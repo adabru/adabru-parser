@@ -314,7 +314,7 @@ export parse = (x, grammar, options={}) ->
           a = _first_letter p
           node.first_letter =
             x:[]
-            ε: _'¬' (a.x `_'∪'` a.ε)
+            ε:[[min,max]]
         case 'optional','star'
           a = _first_letter p
           node.first_letter =
