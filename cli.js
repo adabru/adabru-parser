@@ -1,4 +1,4 @@
 #!/usr/bin/env node
 
-console.log("Precompiled scripts are only available when installing with `npm install adabru-parser`. But this package seems to be installed directly from github. You can either install from npm registry or install webpack and livescript and run webpack in the package's folder.")
+console.log("Precompiled scripts are only available from npm registry. But this package seems to be installed directly from github. You can either do `npm install adabru-parser` or `cd node_modules/adabru-parser && npm install`.")
 console.log("\nHave a nice day :)")
