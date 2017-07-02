@@ -2,6 +2,7 @@
   "name": "adabru-parser",
   "version": "1.0.0",
   "description": "PEG parser generator",
+  "main": "abp.js",
   "scripts": {
     "prepublish": "webpack"
   },
