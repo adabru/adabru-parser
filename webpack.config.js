@@ -19,7 +19,7 @@ module.exports = [{
   target: 'node',
   entry: './abpv1.ls',
   output: {
-    library: 'abp',
+    libraryTarget: 'commonjs',
     filename: './abp.js'
   },
   module: {
