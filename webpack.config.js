@@ -16,7 +16,7 @@ module.exports = [{
     new webpack.BannerPlugin({banner: '#!/usr/bin/env node', raw: true })
   ]
 },{
-  target: 'web',
+  target: 'node',
   entry: './abpv1.ls',
   output: {
     library: 'abp',
