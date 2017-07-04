@@ -15,8 +15,6 @@ do ->
           --nt <nt>        start with nonterminal <nt>, only
                            used when option -i is specified
                            defaults to first given rule in grammar
-          --oo <file>      write parsed file to <file>. if <file> is
-                           empty, ".json" is appended to original name
           -o-, -o <file>   write compiled parser to stdout or <file>
                            if <file> is empty, file is named
                            after grammar file
@@ -53,7 +51,7 @@ do ->
   if argv._.0 is 'verify' then return (require './debug/verify.ls')!
 
   # invalid arguments
-  if argv._.length > 0 or (Object.keys argv).length == 1 or not (Object.keys argv).every ((k) -> k in ['_','g','i','nt','oo','o','d'])
+  if argv._.length > 0 or (Object.keys argv).length == 1 or not (Object.keys argv).every ((k) -> k in ['_','g','i','nt','o','d'])
     return help!
 
   # define grammar
@@ -139,10 +137,3 @@ do ->
   if p?
     s <- promiseThenCatch p, _, stackTrace
     ast <- promiseThenCatch (require './inspector.ls').debug_parse(s, g_compiled, (if argv.nt? then {startNT:argv.nt}), {+print_ast,+stack_trace,force_debug:argv.d}), _, stackTrace
-    # save parsed file
-    switch oo = argv.oo
-      case void then
-      case true then oo = "#i.json" ; fallthrough
-      default
-        (err) <- fs.writeFile oo, (JSON.stringify ast), _
-        log "written file \033[1m#{oo}\033[22m"
