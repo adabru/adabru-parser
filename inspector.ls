@@ -353,7 +353,7 @@ printed_pruned_ast = (ast) ->
   short_print '',ast
 
 # tests
-if require.main === module
+if process.argv.1.endsWith 'inspector.ls' and require.main === module
   memory = {name:'abcd'}
   (ast) <- promiseThenCatch debug_parse('S ← [ab]', require('./abpv1.json'), {memory}), _, stackTrace
   log ast

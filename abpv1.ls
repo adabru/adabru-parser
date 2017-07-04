@@ -435,13 +435,13 @@ export parse = (x, grammar, options={}) ->
 export parseGrammar = require './generator.ls'
 
 # tests
-if require.main === module
+if process.argv.1.endsWith 'abpv1.ls' and require.main === module
   require! [fs]
   (err, data) <- fs.readFile './abpv1.grammar', encoding: 'utf8', _
   if err? then throw err
   grammar <- promiseThenCatch (parseGrammar data), _, stackTrace
   x = "S ← 'a'"
   ast <- promiseThenCatch (parse x, grammar), _, stackTrace
-  if ast.name isnt 'S' or ast.children.0.name isnt 'Rule' then console.log '\033[31mparsing failed\033[39m' 
+  if ast.name isnt 'S' or ast.children.0.name isnt 'Rule' then console.log '\033[31mparsing failed\033[39m'
   ast_sync = parseSync x, grammar
   if (JSON.stringify ast) isnt (JSON.stringify ast_sync) then console.log '\033[31masync parsing differs from sync\033[39m'
