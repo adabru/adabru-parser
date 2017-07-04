@@ -1,10 +1,12 @@
+#!/usr/bin/env lsc
+
 # Thanks to Orlando Hill
 
-util = require 'util'
+require! [util]
 print = (o, d=10) ->
   console.log util.inspect o, {colors: true, depth: d}
 stackTrace = (e) ->
-  "\033[31m#{console.log e.stack}\033[39m"
+  console.log "\033[31m#{e.stack}\033[39m"
 todo = (s) ->
   console.log '\u001b[33mTODO: '+s+'\u001b[39m'
 util.hash = (s) ->
@@ -430,3 +432,16 @@ export parse = (x, grammar, options={}) ->
     options.stack.push [node.func, {x,x_hash:util.hash(x)}, 0, node, []]
     ast <- promiseThenCatch parser.parse(options.stack, options.blocking_rate), _, stackTrace
     fulfill processAst ast, grammar
+export parseGrammar = require './generator.ls'
+
+# tests
+if require.main === module
+  require! [fs]
+  (err, data) <- fs.readFile './abpv1.grammar', encoding: 'utf8', _
+  if err? then throw err
+  grammar <- promiseThenCatch (parseGrammar data), _, stackTrace
+  x = "S ← 'a'"
+  ast <- promiseThenCatch (parse x, grammar), _, stackTrace
+  if ast.name isnt 'S' or ast.children.0.name isnt 'Rule' then console.log '\033[31mparsing failed\033[39m' 
+  ast_sync = parseSync x, grammar
+  if (JSON.stringify ast) isnt (JSON.stringify ast_sync) then console.log '\033[31masync parsing differs from sync\033[39m'
