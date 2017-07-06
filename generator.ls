@@ -7,11 +7,10 @@ promiseThenCatch = (p, t, c) -> p.then(t).catch(c)
 module.exports = exports = (grammarText) ->
   abpv1Grammar = require './abpv1.json'
   abpv1 = require './abpv1.ls'
-  inspector = require './inspector.ls'
   memory = {name: 'memory'}
 
   (fulfill,reject) <- new Promise _
-  ast <- promiseThenCatch inspector.debug_parse(grammarText, abpv1Grammar, {memory}, {-print_ast}), _, reject
+  ast <- promiseThenCatch (abpv1.parse grammarText, abpv1Grammar), _, reject
   if not ast? then return fulfill!
 
   # build grammar from raw ast
