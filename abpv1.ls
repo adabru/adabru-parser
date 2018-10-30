@@ -435,7 +435,7 @@ export parse = (x, grammar, options={}) ->
 export parseGrammar = require './generator.ls'
 
 # tests
-if process.argv.1.endsWith 'abpv1.ls' and require.main === module
+if process.argv.1.endsWith 'abpv1.ls' and require.main === module and !BUILD
   require! [fs]
   (err, data) <- fs.readFile './abpv1.grammar', encoding: 'utf8', _
   if err? then throw err

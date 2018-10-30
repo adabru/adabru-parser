@@ -1,6 +1,7 @@
 var webpack = require("webpack")
 
 module.exports = [{
+  mode: 'development',
   target: 'node',
   entry: './cli.ls',
   output: {
@@ -16,6 +17,7 @@ module.exports = [{
     new webpack.BannerPlugin({banner: '#!/usr/bin/env node', raw: true })
   ]
 },{
+  mode: 'development',
   target: 'node',
   entry: './abpv1.ls',
   output: {
@@ -27,5 +29,8 @@ module.exports = [{
       test: /\.ls$/,
       loader: 'livescript-loader'
     }]
-  }
+  },
+  plugins: [
+    new webpack.DefinePlugin({BUILD: true})
+  ]
 }]
