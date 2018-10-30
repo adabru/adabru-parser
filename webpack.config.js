@@ -29,8 +29,5 @@ module.exports = [{
       test: /\.ls$/,
       loader: 'livescript-loader'
     }]
-  },
-  plugins: [
-    new webpack.DefinePlugin({BUILD: true})
-  ]
+  }
 }]
