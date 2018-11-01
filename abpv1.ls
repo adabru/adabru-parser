@@ -2,19 +2,25 @@
 
 # Thanks to Orlando Hill
 
-require! [util]
+require! [util, fs]
+
+utils = do
+  isString: (s) -> typeof s is 'string'
+  isArray: Array.isArray
+  hash: (s) ->
+    hash = 0
+    for i from 0 to s.length-1
+      hash  = (((hash .<<. 5) - hash) + s.charCodeAt i) .|. 0
+    hash
+  flatten: (arr) -> [].concat.apply [], arr
+
 print = (o, d=10) ->
-  console.log util.inspect o, {colors: true, depth: d}
+  if window then console.log o # browser
+  else      then console.log util.inspect o, {colors: true, depth: d}
 stackTrace = (e) ->
   console.log "\033[31m#{e.stack}\033[39m"
 todo = (s) ->
   console.log '\u001b[33mTODO: '+s+'\u001b[39m'
-util.hash = (s) ->
-  hash = 0
-  for i from 0 to s.length-1
-    hash  = (((hash .<<. 5) - hash) + s.charCodeAt i) .|. 0
-  hash
-util.flatten = (arr) -> [].concat.apply [], arr
 promiseThenCatch = (p, t, c) -> p.then(t).catch(c)
 
 export class Ast
@@ -25,11 +31,11 @@ adabru_v1_parser = new
     [c] = node.params
     ast = new Ast '_T', pos
     pass = switch
-      case util.isString c
+      case utils.isString c
         for i from 0 to c.length-1
           if c[i++] != x[pos++] then break
         c[i-1] == x[pos-1]
-      case util.isArray c # char class
+      case utils.isArray c # char class
         pos++ < x.length
         and if c[0] == '^' then (c.slice 1).every ((cc) -> not (cc[0] <= x[pos-1] <= cc[1]))
                        else c.some ((cc) -> cc[0] <= x[pos-1] <= cc[1])
@@ -150,7 +156,7 @@ adabru_v1_parser = new
             default then (ast.children.map flatten x).join ''
         _local first_ast = new Ast '_PASS',pos,c_ast.end,c_ast.lookAhead,c_ast.status,[c_ast]
         first_ast.x = flatten x,c_ast
-        first_ast.x_hash = x_hash+",#{pos},#{c_ast.end}:"+util.hash first_ast.x
+        first_ast.x_hash = x_hash+",#{pos},#{c_ast.end}:"+utils.hash first_ast.x
         _call children[1].func, {first_ast.x,first_ast.x_hash}, 0, children[1]
       case first_ast? and c_ast?
         first_ast
@@ -272,7 +278,7 @@ export parse = (x, grammar, options={}) ->
       ([a,left],cc) ->
         if left < cc[0] then [a ++ [[left,cc[0]-1]], cc[1]+1] else [a, cc[1]+1]
       , [[],min]) |> ([a,left]) -> if left < max then a ++ [[left,max]] else a
-    _'∪' = (...ccs) -> (ccs |> util.flatten).sort( (s,t)->+s.0 - +t.0 ).reduce(
+    _'∪' = (...ccs) -> (ccs |> utils.flatten).sort( (s,t)->+s.0 - +t.0 ).reduce(
       ([...as,a],cc) ->
         switch
           case not a? then [cc]
@@ -287,9 +293,9 @@ export parse = (x, grammar, options={}) ->
         case 'terminal'
           node.first_letter =
             x:switch
-              case util.isString p                then [[p.charCodeAt(0), p.charCodeAt(0)]]
-              case util.isArray p and p[0] == '^' then _'¬' _'∪' (p.slice 1).map (cc) -> [cc.charCodeAt(0),cc.charCodeAt(1)]
-              case util.isArray p                 then _'∪' p.map (cc) -> [cc.charCodeAt(0),cc.charCodeAt(1)]
+              case utils.isString p                then [[p.charCodeAt(0), p.charCodeAt(0)]]
+              case utils.isArray p and p[0] == '^' then _'¬' _'∪' (p.slice 1).map (cc) -> [cc.charCodeAt(0),cc.charCodeAt(1)]
+              case utils.isArray p                 then _'∪' p.map (cc) -> [cc.charCodeAt(0),cc.charCodeAt(1)]
               case p is null                      then [[min,max]]
             ε:[]
         case 'alternative'
@@ -343,7 +349,7 @@ export parse = (x, grammar, options={}) ->
         _child_func = child.func
         if swr(child)?
           r = child.regex
-          if precedence.indexOf(func) < precedence.indexOf(if _child_func is 'terminal' and util.isString child.params.0 and child.params.0.length > 0 then 'sequence' else _child_func)
+          if precedence.indexOf(func) < precedence.indexOf(if _child_func is 'terminal' and utils.isString child.params.0 and child.params.0.length > 0 then 'sequence' else _child_func)
             r = "(#r)"
           r
       ) func
@@ -356,10 +362,10 @@ export parse = (x, grammar, options={}) ->
           cc_string = (ccs) ->
             ccs.map((cc) -> "#{cc.0}#{if cc.0 != cc.1 then "-#{cc.1}" else ""}").join('').replace(/]/g, '\\]')
           switch
-            case util.isString p
+            case utils.isString p
               ['\\\\','\\[','\\|','\\*','\\+','\\?','\\(','\\)','\\.'].reduce ((a,x) -> a.replace new RegExp(x,'g'), x), p
-            case util.isArray p and p[0] == '^' then "[^#{cc_string(p.slice(1))}]"
-            case util.isArray p                 then "[#{cc_string(p)}]"
+            case utils.isArray p and p[0] == '^' then "[^#{cc_string(p.slice(1))}]"
+            case utils.isArray p                 then "[#{cc_string(p)}]"
             case p is null                      then "[^]"
         case 'alternative'
           children = p.map (c) -> child_regex c
@@ -402,9 +408,9 @@ export parse = (x, grammar, options={}) ->
         case '_ALT', '_SEQ', '_VOID', '_AND', '_NOT', '_OPT', '_STAR', '_PLUS', '_NT'
           # concat all pruned children
           res = []
-          for element in util.flatten(ast.children.map pruned x)
+          for element in utils.flatten(ast.children.map pruned x)
             switch
-              case util.isString res[res.length-1] and util.isString element
+              case utils.isString res[res.length-1] and utils.isString element
                 res[res.length-1] += element
               case element != ''
                 res ++= element
@@ -422,21 +428,20 @@ export parse = (x, grammar, options={}) ->
   if options.blocking_rate is Infinity
     {parser,grammar:prepGrammar} = prepareParser grammar, options
     node = prepGrammar._start
-    options.stack.push [node.func, {x,x_hash:util.hash(x)}, 0, node, []]
+    options.stack.push [node.func, {x,x_hash:utils.hash(x)}, 0, node, []]
     ast = parser.parse(options.stack, options.blocking_rate)
     return processAst ast, grammar
   else
     (fulfill, reject) <- new Promise _
     {parser,grammar:prepGrammar} = prepareParser grammar, options
     node = prepGrammar._start
-    options.stack.push [node.func, {x,x_hash:util.hash(x)}, 0, node, []]
+    options.stack.push [node.func, {x,x_hash:utils.hash(x)}, 0, node, []]
     ast <- promiseThenCatch parser.parse(options.stack, options.blocking_rate), _, stackTrace
     fulfill processAst ast, grammar
+
 export parseGrammar = require './generator.ls'
 
-# tests
-if process.argv.1.endsWith 'abpv1.ls' and require.main === module
-  require! [fs]
+if process.argv.2?.endsWith 'abpv1.ls' and require.main === module
   (err, data) <- fs.readFile './abpv1.grammar', encoding: 'utf8', _
   if err? then throw err
   grammar <- promiseThenCatch (parseGrammar data), _, stackTrace

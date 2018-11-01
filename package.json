@@ -2,12 +2,9 @@
   "name": "adabru-parser",
   "version": "1.0.0",
   "description": "PEG parser generator",
-  "main": "dist/abp.js",
-  "scripts": {
-    "prepublish": "webpack"
-  },
+  "main": "abpv1.ls",
   "bin": {
-    "abp": "dist/cli.js"
+    "abp": "cli.ls"
   },
   "repository": {
     "type": "git",
@@ -28,11 +25,8 @@
     "url": "https://github.com/adabru/adabru-parser/issues"
   },
   "homepage": "https://github.com/adabru/adabru-parser#readme",
-  "devDependencies": {
-    "livescript": "^1.5.0",
-    "livescript-loader": "^0.1.6",
-    "minimist": "^1.2.0",
-    "webpack": "^4.23.1",
-    "webpack-cli": "^3.1.2"
+  "dependencies": {
+    "livescript": "^1.6.0",
+    "minimist": "^1.2.0"
   }
 }
