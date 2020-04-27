@@ -84,7 +84,86 @@ module.exports = exports = (grammar, input, basepath, bInit) ->
     fs.writeFileSync "#d/#{g}_#f.oracle", parse_result
   else
     _o = fs.readFileSync "#d/#{g}_#f.oracle", {encoding: 'utf8'}
-    log if _o is parse_result then 'Everything as oracle says' else 'Attention, does not match with oracle'
+    if _o is parse_result
+      log 'Everything as oracle says'
+    else
+      # print pretty diff, cf inspector.ls
+      require! [util]
+      colors = let e = ((e1,e2,s) --> "\u001b[#{e1}m#{s}\u001b[#{e2}m")
+        b = [] ; for i in [0 to 7] then b[i]=e("4#i","49") ; for i in [100 to 107] then b[i]=e(i,"49")
+        f = [] ; for i in [0 to 7] then f[i]=e("3#i","39") ; for i in [90 to 97] then f[i]=e(i,"39")
+        {f,b,inv:e('07','27'), pos:e('27','07'), bold:e('01',22), dim:e('02',22), reset:e('00','00')}
+      printed_pruned_ast = (ast) ->
+        {f,b,inv,dim} = colors
+        short_print = (prefix, ast) ->
+          if util.isString ast
+            s = (b.100 f.92 ast).replace(/\n/g, inv 'n')
+          else
+            s = f.3 ast.name
+            abbr = ast.name.substr 0,2
+            prefix += (dim f.3 abbr) + ' '
+            if ast.children.length == 1
+              s += ' ' + short_print prefix, ast.children.0
+            else then for c in ast.children
+              s += '\n' + prefix + (short_print prefix, c)
+            s
+        short_print '',ast
+      pretty = printed_pruned_ast ast
+      oracle_pretty = printed_pruned_ast JSON.parse _o
+      # levenshtein line diff
+      u = pretty.split '\n'
+      v = oracle_pretty.split '\n'
+
+      # dynamic programming with backtracking, start with mapping (u₀=ε, …, uₙ=v) → v₀=ε
+      cost = [0 to u.length + 1]
+      backtracking = [0 to u.length + 1].map (_, i) -> if i is 0 then ['_'] else ['D']
+
+      # build 'table' up until (u₀=ε, …, uₙ=v) → vₙ=v
+      # i\j     ε  u₁ …  uₙ
+      # ε      [0  1  …  n ] = cost, i=0
+      # v₁     [1  …       ] = cost, i=1
+      # …
+      # vₘ               _ x = optimum
+      #
+      # see https://github.com/hiddentao/fast-levenshtein/blob/master/levenshtein.js for optimization
+      #
+      # insertion = add from v
+      # deletion = add from u
+      # substitution = add from both
+      #
+      for i from 1 to v.length + 1
+        # previous row
+        _cost = cost.slice!
+
+        cost[0] = _cost[0] + 1
+        backtracking[0].push 'I'
+        for j from 1 to u.length + 1
+          substitutionCost = cost[j] = _cost[j-1] + if u[j-1] is v[i-1] then 0 else 5 # actually not allowed
+          insertionCost = _cost[j] + 1
+          deletionCost = cost[j-1] + 1
+          cost[j] = Math.min substitutionCost, insertionCost, deletionCost
+          backtracking[j].push if substitutionCost is cost[j] then 'S' else if insertionCost is cost[j] then 'I' else 'D'
+
+      # backtrace and create diff
+      i_u = u.length
+      i_v = v.length
+      diff = ''
+      greyout = (s) -> s .replace(/\u001b\[3[1-6]m/g, '\u001b[37m') .replace(/\u001b\[9[1-6]m/g, '\u001b[97m')
+      while backtracking[i_u][i_v] isnt '_'
+        switch backtracking[i_u][i_v]
+          | 'S'
+            diff = (greyout u[i_u - 1]) + '\n' + diff
+            i_u--
+            i_v--
+          | 'I'
+            diff = 'oracl ' + v[i_v - 1] + '\n' + diff
+            i_v--
+          | 'D'
+            diff = 'newer ' + u[i_u - 1] + '\n' + diff
+            i_u--
+
+      log 'Attention, does not match with oracle, showing diff:'
+      log diff
 
 if process.argv.1.endsWith 'verify.ls'
   exports!
