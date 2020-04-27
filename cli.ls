@@ -45,17 +45,41 @@ do ->
     '''
 
   # parse arguments
-  argv = require('minimist') process.argv.slice(2), {}
+  args = []
+  opt
+  for arg in process.argv.slice (if process.argv.lsc? then 3 else 2)
+    if arg.startsWith '-'
+      if opt?
+        args[opt] = true
+      opt = arg.replace /(^-+)|(-$)/g, ''
+      if arg.endsWith '-'
+        args[opt] = '-'
+        opt = null
+    else if opt?
+      args[opt] = arg
+      opt = null
+    else
+      args.push arg
+  if opt?
+    args[opt] = true
 
-  if argv._.0 is 'bench' then return (require './debug/benchmark.ls')!
-  if argv._.0 is 'verify' then return (require './debug/verify.ls')!
+  require! [fs,path]
+
+  (_, scriptpath) <- fs.realpath process.argv.lsc.0, _
+  realrequire = (path) -> require "#{scriptpath}/../#{path}"
+
+  if args.0 is 'bench' then return (realrequire "./debug/benchmark.ls")!
+  if args.0 is 'verify' then return (realrequire "./debug/verify.ls")!
 
   # invalid arguments
-  if argv._.length > 0 or (Object.keys argv).length == 1 or not (Object.keys argv).every ((k) -> k in ['_','g','i','nt','o','d'])
+  if (Object.keys args).length is 0
     return help!
+  else if args.length > 0
+    log "only accepted positional arguments are 'bench' and 'verify'"
+  else if not (Object.keys args).every ((k) -> k in ['_','g','i','nt','o','d'])
+    log "unsupported option(s): #{Object.keys(args).filter(((k) -> not (k in ['_','g','i','nt','o','d']))).join ', '}"
 
   # define grammar
-  require! [fs,path]
   error = (s) -> console.log '\033[31m'+s+'\033[39m'
   stackTrace = (e) -> error e.stack
   checkFile = (file, isok=->true, iswrong=->false) ->
@@ -82,7 +106,7 @@ do ->
         if a[1] < dist then a else [f,dist]
       ,['',999]
       if fuzzy[1] <= base.length/2 then iswrong fuzzy[0] else iswrong!
-  g = argv.g
+  g = args.g
   if not g? or g is true
     g = (fs.readdirSync '.').find (f) -> f.endsWith '.grammar'
     if not g?
@@ -93,7 +117,7 @@ do ->
       return
 
   # generate (async)
-  o = argv.o
+  o = args.o
   promiseThenCatch = (p, t, c) -> p.then(t).catch(c)
   if o is true then o = (path.basename g, '.grammar') + '.json'
   p = if o? and (checkFile o,(->true),(->false)) and (fs.statSync g).mtime.getTime! < (fs.statSync o).mtime.getTime!
@@ -104,7 +128,7 @@ do ->
     g_text = fs.readFileSync g, {encoding: 'utf8'}
     (fulfill,reject) <- new Promise _
     _o = o # scope issue
-    grammar <- promiseThenCatch ((require './generator.ls') g_text), _, stackTrace
+    grammar <- promiseThenCatch ((realrequire './generator.ls') g_text), _, stackTrace
     o = _o
     switch o
       case void then
@@ -116,7 +140,7 @@ do ->
   g_compiled <- promiseThenCatch p, _, stackTrace
 
   # define input file
-  i = argv.i
+  i = args.i
   p = null
   if i?
     res = ''
@@ -136,4 +160,4 @@ do ->
   # parse input file (async)
   if p?
     s <- promiseThenCatch p, _, stackTrace
-    ast <- promiseThenCatch (require './inspector.ls').debug_parse(s, g_compiled, (if argv.nt? then {startNT:argv.nt}), {+print_ast,+stack_trace,force_debug:argv.d}), _, stackTrace
+    ast <- promiseThenCatch (realrequire './inspector.ls').debug_parse(s, g_compiled, (if args.nt? then {startNT:args.nt}), {+print_ast,+stack_trace,force_debug:args.d}), _, stackTrace

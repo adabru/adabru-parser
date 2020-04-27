@@ -14,24 +14,42 @@ module.exports = exports = (grammar, input, basepath, bInit) ->
           • <dir>/<grammar_number>_<file_number>.oracle
     '''
 
-  argv = require('minimist') process.argv.slice(2), {}
+  # parse arguments
+  args = []
+  opt
+  for arg in process.argv.slice (if process.argv.lsc? then 3 else 2)
+    if arg.startsWith '-'
+      if opt?
+        args[opt] = true
+      opt = arg.replace /(^-+)|(-$)/g, ''
+      if arg.endsWith '-'
+        args[opt] = '-'
+        opt = null
+    else if opt?
+      args[opt] = arg
+      opt = null
+    else
+      args.push arg
+  if opt?
+    args[opt] = true
 
-  if argv._.0 isnt 'verify' or argv._.length isnt 4
+  if args.0 isnt 'verify' or args.length isnt 4
+    log 'invalid arguments'
     return help!
 
   require! [fs]
   exists = (path) ->
     try fs.accessSync path; true
     catch then false
-  [_,d,g,f] = argv._
-  error = (s) -> console.log '\033[31m'+s+'\033[39m'
+  [_,d,g,f] = args
+  error = (s) -> console.error "\033[31m#{s}\n#{new Error!.stack}\033[39m"
   if not exists d
     return error "directory \033[1m#{d}\033[22m does not exist"
   if not exists "#d/#g.grammar"
     return error "grammar \033[1m#d/#g.grammar\033[22m does not exist"
   if not exists "#d/#{g}_#f"
     return error "file \033[1m#d/#{g}_#f\033[22m does not exist"
-  if not argv.init and not exists "#d/#{g}_#f.oracle"
+  if not args.init and not exists "#d/#{g}_#f.oracle"
     return error "oracle for file \033[1m#d/#{g}_#f\033[22m does not yet exist"
 
   # get grammar
@@ -54,7 +72,7 @@ module.exports = exports = (grammar, input, basepath, bInit) ->
 
   # parse
   abpv1 = require '../abpv1.ls'
-  if argv.init
+  if args.init
     p = (require '../inspector.ls').debug_parse _f, _g, null, {+print_ast,+stack_trace}
   else
     p = abpv1.parse _f,_g
@@ -62,7 +80,7 @@ module.exports = exports = (grammar, input, basepath, bInit) ->
   parse_result = JSON.stringify ast
 
   # create or check with oracle
-  if argv.init
+  if args.init
     fs.writeFileSync "#d/#{g}_#f.oracle", parse_result
   else
     _o = fs.readFileSync "#d/#{g}_#f.oracle", {encoding: 'utf8'}

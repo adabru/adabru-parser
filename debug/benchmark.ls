@@ -14,16 +14,33 @@ module.exports = exports = (grammar, file) ->
           • <dir>/<grammar_number>.json (cached)
     '''
 
-  argv = require('minimist') process.argv.slice(2), {}
+  # parse arguments
+  args = []
+  opt
+  for arg in process.argv.slice (if process.argv.lsc? then 3 else 2)
+    if arg.startsWith '-'
+      if opt?
+        args[opt] = true
+      opt = arg.replace /(^-+)|(-$)/g, ''
+      if arg.endsWith '-'
+        args[opt] = '-'
+        opt = null
+    else if opt?
+      args[opt] = arg
+      opt = null
+    else
+      args.push arg
+  if opt?
+    args[opt] = true
 
-  if argv._.0 isnt 'bench' or argv._.length isnt 4
+  if args.0 isnt 'bench' or args.length isnt 4
     return help!
 
   require! [fs]
   exists = (path) ->
     try fs.accessSync path; true
     catch then false
-  [_,d,g,f] = argv._
+  [_,d,g,f] = args
   error = (s) -> console.log '\033[31m'+s+'\033[39m'
   if not exists d
     return error "directory \033[1m#{d}\033[22m does not exist"

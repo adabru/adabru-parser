@@ -26,7 +26,6 @@
   },
   "homepage": "https://github.com/adabru/adabru-parser#readme",
   "dependencies": {
-    "livescript": "^1.6.0",
-    "minimist": "^1.2.0"
+    "livescript": "^1.6.0"
   }
 }
